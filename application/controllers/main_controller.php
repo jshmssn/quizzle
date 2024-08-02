@@ -17,11 +17,10 @@ class main_controller extends CI_Controller {
         $this->load->view('../views/create/createquiz');
     }
 
-    public function creator()
-	{
-		$this->load->view('../views/create/quiz_creator');
-        
-	}
+    public function creator() {
+        $this->load->view('../views/create/quiz_creator');
+    }
+
     public function submit() {
         $questions = $this->input->post('questions');
         
@@ -48,7 +47,7 @@ class main_controller extends CI_Controller {
                 // Save room_id and PIN to the rooms table
                 if ($this->quiz_model->save_room($roomId, $pin)) {
                     $this->session->set_flashdata('status', 'success');
-                    $this->session->set_flashdata('msg', 'Quiz questions and room has been created successfully!');
+                    $this->session->set_flashdata('msg', 'Quiz questions submitted successfully and room created!');
                     
                     // Store roomId and roomPin in regular session data
                     $this->session->set_userdata('roomId', $roomId);
@@ -66,37 +65,110 @@ class main_controller extends CI_Controller {
             $this->session->set_flashdata('msg', 'No quiz questions provided.');
         }
     
-        $this->load->view('host/host');
+        redirect('main_controller/hostgame');
     }
-
-    public function get_participants() {
-        // Load the quiz model
-        $this->load->model('quiz_model');
     
-        // Assuming room_pin is passed via GET or is already available in the session
-        $room_pin = $this->input->get('room_pin') ?? $this->session->userdata('roomPin');
+    public function hostgame() {
+        $roomPin = $this->session->userdata('roomPin');
     
-        if ($room_pin) {
-            // Fetch participants from the model
-            $participants = $this->quiz_model->get_participants_by_room($room_pin);
+        // Fetch participants using the updated model method
+        $data['participants'] = $this->quiz_model->get_participants($roomPin);
     
-            if (!empty($participants)) {
-                // Return participants' names as a newline-separated string
-                echo implode("\n", array_column($participants, 'name'));
-            } else {
-                echo "No participants yet.";
-            }
+        $this->load->view('host/host', $data);
+    }
+    
+    public function get_players() {
+        $roomPin = $this->session->userdata('roomPin');
+    
+        if ($roomPin) {
+            // Fetch participants using the model
+            $participants = $this->quiz_model->get_participants($roomPin);
+    
+            // Return participants as JSON
+            echo json_encode(['players' => $participants]);
         } else {
-            echo "Room PIN not provided.";
+            echo json_encode(['players' => []]);
         }
     }
-    
 
-    public function start_game() {
-        // Your logic to start the game
+    public function join() {
+        // Get form data
+        $name = $this->input->post('name');
         $room_pin = $this->input->post('room_pin');
-        // Implement the game start logic here
-        // ...
+    
+        // Validate the input (e.g., check if the room_pin exists)
+        if ($this->quiz_model->validate_room_pin($room_pin)) {
+            // Store the player's name and room_pin in session data
+            $this->session->set_userdata('player_name', $name);
+            $this->session->set_userdata('room_pin', $room_pin);
+    
+            // Process the join logic
+            $this->quiz_model->process_join($name, $room_pin);
+    
+            // Redirect to the room
+            redirect('main_controller/room');
+        } else {
+            // Redirect back with an error message
+            $this->session->set_flashdata('error', 'Invalid Room PIN.');
+            redirect('main_controller');
+        }
+    }    
+    
+    public function room() {
+        // Check if player is logged in by checking session data
+        if (!$this->session->userdata('player_name') || !$this->session->userdata('room_pin')) {
+            // If not, redirect to a different page (e.g., main page)
+            redirect('main_controller');
+        }
+    
+        // Load the confirmation view
+        $this->load->view('player/room');
     }
+    
+    public function quitroom() {    
+        // Get the room pin from session data
+        $roomPin = $this->session->userdata('roomPin');
+    
+        // Check if the room pin exists in the session
+        if ($roomPin) {
+            // Update the room's validity status
+            $this->quiz_model->invalidate_room($roomPin);
+    
+            // Unset the roomPin session data
+            $this->session->unset_userdata('roomPin');
+    
+            // Set a flash message for success
+            $this->session->set_flashdata('status', 'success');
+            $this->session->set_flashdata('msg', 'You have left the room successfully.');
+        } else {
+            // Set a flash message for error
+            $this->session->set_flashdata('status', 'error');
+            $this->session->set_flashdata('msg', 'Room PIN could not be found.');
+        }
+    
+        // Redirect to the index page
+        redirect('welcome');
+    }
+    
+    public function leftroom() {
+        // Get the player name and room PIN from session data
+        $playerName = $this->session->userdata('player_name');
+        $roomPin = $this->session->userdata('room_pin');
+    
+        // Check if player name and room PIN exist in session
+        if ($playerName && $roomPin) {
+            // Call the model method to delete the participant
+            $this->quiz_model->left_participant($playerName, $roomPin);
+    
+            // Unset the player name and room PIN from session data
+            $this->session->unset_userdata('player_name');
+            $this->session->unset_userdata('room_pin');
+        }
+    
+        // Redirect to the welcome page
+        redirect('welcome');
+    }
+    
 }
+
 ?>

@@ -46,25 +46,62 @@ class quiz_model extends CI_Model {
         return ($this->db->affected_rows() > 0);
     }
 
-    public function get_room_data() {
-        // Example SQL to fetch room_pin and participants; adjust based on your schema
-        $this->db->select('rooms.room_pin, participants.name');
-        $this->db->from('rooms');
-        $this->db->join('participants', 'participants.room_id = rooms.id');
-        $query = $this->db->get();
+    public function get_participants($room_pin) {
+        // Fetch participants from the database based on room_pin
+        $this->db->where('room_pin', $room_pin);
+        $query = $this->db->get('participants'); // Adjust table name and column names as needed
+        
+        return $query->result_array();
+    }
+
+    public function is_player_name_exists($name, $room_pin) {
+        $this->db->where('name', $name);
+        $this->db->where('room_pin', $room_pin);
+        $query = $this->db->get('participants');
+        
+        return $query->num_rows() > 0;
+    }
     
-        if ($query->num_rows() > 0) {
-            $result = $query->result_array();
-            // Assuming all participants belong to the same room, take room_pin from the first row
-            $room_pin = $result[0]['room_pin'];
-            $participants = array_column($result, 'name');
-            return [
-                'room_pin' => $room_pin,
-                'participants' => $participants
-            ];
+    public function process_join($name, $room_pin) {
+        // Check if the name already exists for this room_pin
+        $original_name = $name;
+        $counter = 1;
+    
+        while ($this->is_player_name_exists($name, $room_pin)) {
+            // Append the counter to the original name
+            $name = $original_name . $counter;
+            $counter++;
         }
     
-        return null; // No data found
+        // Insert the unique player name into the 'participants' table
+        $data = array(
+            'name' => $name,
+            'room_pin' => $room_pin
+        );
+    
+        $this->db->insert('participants', $data);
+    }
+    
+    
+    public function validate_room_pin($room_pin) {
+        // Query the database to check if the room_pin exists
+        $this->db->where('pin', $room_pin);
+        $query = $this->db->get('rooms');
+        
+        return $query->num_rows() > 0;
+    }
+    
+    public function invalidate_room($roomPin) {
+        $data = array('isValid' => 0);
+        $this->db->where('pin', $roomPin);
+        $this->db->update('rooms', $data);
+    }
+
+    public function left_participant($playerName, $roomPin) {
+        // Delete the participant based on the player name and room PIN
+        $this->db->where('name', $playerName);
+        $this->db->where('room_pin', $roomPin);
+        $this->db->delete('participants'); // Adjust table name if different
     }
     
 }

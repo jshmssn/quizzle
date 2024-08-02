@@ -80,10 +80,10 @@
                             <!-- Player cards will be updated here -->
                         </div>
                     </div>
-
-                    <button type="submit" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
-                    <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel</a>
                 </form>
+                <h3 class="mt-4">Waiting for the host to start the game.</h3>
+                <a style="font-weight: 700;" href="<?php echo site_url('main_controller/leftroom') ?>" type="#">Left Room</a>
+
             </div>
         <?php else: ?>
             <p class="alert alert-warning">Room PIN could not be retrieved.</p>

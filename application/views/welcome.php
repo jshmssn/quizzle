@@ -69,14 +69,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 	<div id="container">
 		<div id="body">
 			<h1 class="mb-4">Welcome Players!</h1>
-			<form action="">
+			<form action="<?php echo site_url('main_controller/join'); ?>" method="post">
 				<div class="mb-3">
 					<label for="displayName" class="form-label">Player Name</label>
-					<input type="text" id="displayName" class="form-control">
+					<input type="text" name="name" id="displayName" class="form-control">
 				</div>
 				<div class="mb-3">
-					<label for="roomId" class="form-label">Room ID</label>
-					<input type="number" maxlength="5" id="roomId" class="form-control">
+					<label for="roomId" class="form-label">Room PIN</label>
+					<input type="number" name="room_pin" maxlength="5" id="roomId" class="form-control">
 				</div>
 				<button type="submit" class="btn btn-primary">Join</button>
 			</form>
