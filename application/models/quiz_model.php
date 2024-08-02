@@ -7,12 +7,6 @@ class quiz_model extends CI_Model {
         $this->load->database();
     }
 
-    function getParticipants(){
-        $this->db->where("isValid",1);        
-        $result = $this->db->get("participants");
-        return $result->result_array();
-    }
-
     public function save_question($questionText, $answers, $correctAnswerIndex) {
         // Insert the question
         $data = array(
@@ -51,5 +45,27 @@ class quiz_model extends CI_Model {
 
         return ($this->db->affected_rows() > 0);
     }
+
+    public function get_room_data() {
+        // Example SQL to fetch room_pin and participants; adjust based on your schema
+        $this->db->select('rooms.room_pin, participants.name');
+        $this->db->from('rooms');
+        $this->db->join('participants', 'participants.room_id = rooms.id');
+        $query = $this->db->get();
+    
+        if ($query->num_rows() > 0) {
+            $result = $query->result_array();
+            // Assuming all participants belong to the same room, take room_pin from the first row
+            $room_pin = $result[0]['room_pin'];
+            $participants = array_column($result, 'name');
+            return [
+                'room_pin' => $room_pin,
+                'participants' => $participants
+            ];
+        }
+    
+        return null; // No data found
+    }
+    
 }
 ?>

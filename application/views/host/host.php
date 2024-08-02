@@ -30,27 +30,19 @@
             </div>
         <?php endif; ?>
 
-        <?php if ($this->session->userdata('roomPin')): ?>
+        <?php if (!empty($room_pin)): ?>
             <h3 class="mb-4 text-center">Room PIN</h3>
             <div class="form-group">
-                <input type="text" class="form-control text-center form-control-lg" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                <input type="text" class="form-control text-center form-control-lg" value="<?php echo htmlspecialchars($room_pin, ENT_QUOTES, 'UTF-8'); ?>" readonly>
             </div>
 
             <div class="centered-container mt-4">
                 <form action="<?php echo site_url('main_controller/start_game'); ?>" method="post">
-                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($room_pin, ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="form-group">
                         <textarea id="participants-list" class="form-control textarea-container" readonly>
-                            <?php
-                            if (!empty($participants)) {
-                                foreach ($participants as $participant) {
-                                    echo htmlspecialchars($participant['name'], ENT_QUOTES, 'UTF-8') . "\n";
-                                }
-                            } else {
-                                echo "No participants yet.";
-                            }
-                            ?>
+                            <!-- MAKE ME A CONTROLLER THAT WILL FETCH PARTIPANTS LIST EVERY 3 SECONDS AND UPDATE THE TEXTAREA WITHOUT REFREHSHING THE PAGE -->
                         </textarea>
                     </div>
 
@@ -58,9 +50,29 @@
                 </form>
             </div>
         <?php else: ?>
-            <p class="alert alert-warning">Room PIN could not be retrieved.</p>
+            <p class="alert alert-warning">No room or participants data found.</p>
         <?php endif; ?>
     </div>
+    <script>
+        function fetchParticipants() {
+            $.ajax({
+                url: "<?php echo site_url('main_controller/get_participants'); ?>", // Controller method URL
+                method: "GET",
+                success: function(data) {
+                    $('#participants-list').val(data);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Failed to fetch participants: " + error);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Fetch participants initially and then every 3 seconds
+            fetchParticipants();
+            setInterval(fetchParticipants, 3000);
+        });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
