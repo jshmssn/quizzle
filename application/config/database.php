@@ -75,9 +75,9 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => '',
+	'hostname' => '10.0.0.66',
+	'username' => 'JRC',
+	'password' => 'Mjas145326',
 	'database' => 'quizzle',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',

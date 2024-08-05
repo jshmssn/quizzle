@@ -35,25 +35,32 @@ class quiz_model extends CI_Model {
     }
 
     public function save_room($roomId, $pin) {
-        // Insert room_id and PIN into rooms table
+        // Insert room_id, PIN, and isValid into rooms table
         $data = array(
             'room_id' => $roomId,
-            'pin' => $pin
+            'pin' => $pin,
+            'isValid' => 1
         );
-
+    
         $this->db->insert('rooms', $data);
-
+    
         return ($this->db->affected_rows() > 0);
-    }
+    }    
 
     public function get_participants($room_pin) {
-        // Fetch participants from the database based on room_pin
-        $this->db->where('room_pin', $room_pin);
-        $query = $this->db->get('participants'); // Adjust table name and column names as needed
-        
-        return $query->result_array();
+        // Check if room is valid
+        if ($this->is_room_valid($room_pin)) {
+            // Fetch participants from the database based on room_pin
+            $this->db->where('room_pin', $room_pin);
+            $query = $this->db->get('participants'); // Adjust table name and column names as needed
+            
+            return $query->result_array();
+        } else {
+            // Return an empty array or handle invalid room case
+            return [];
+        }
     }
-
+    
     public function is_player_name_exists($name, $room_pin) {
         $this->db->where('name', $name);
         $this->db->where('room_pin', $room_pin);
@@ -84,8 +91,9 @@ class quiz_model extends CI_Model {
     
     
     public function validate_room_pin($room_pin) {
-        // Query the database to check if the room_pin exists
+        // Query the database to check if the room_pin exists and is valid
         $this->db->where('pin', $room_pin);
+        $this->db->where('isValid', 1); // Check if room is valid
         $query = $this->db->get('rooms');
         
         return $query->num_rows() > 0;
@@ -95,13 +103,29 @@ class quiz_model extends CI_Model {
         $data = array('isValid' => 0);
         $this->db->where('pin', $roomPin);
         $this->db->update('rooms', $data);
+    
+        return ($this->db->affected_rows() > 0);
     }
-
+    
     public function left_participant($playerName, $roomPin) {
         // Delete the participant based on the player name and room PIN
         $this->db->where('name', $playerName);
         $this->db->where('room_pin', $roomPin);
-        $this->db->delete('participants'); // Adjust table name if different
+        $this->db->delete('participants');
+    }
+    
+    public function exit_all_participants($roomPin){
+        $this->db->where('room_pin', $roomPin);
+        $this->db->delete('participants');
+    }
+
+    public function is_room_valid($roomPin) {
+        $this->db->select('isValid');
+        $this->db->where('pin', $roomPin);
+        $query = $this->db->get('rooms');
+        $result = $query->row_array();
+    
+        return isset($result['isValid']) ? $result['isValid'] : null;
     }
     
 }

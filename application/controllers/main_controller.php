@@ -109,9 +109,12 @@ class main_controller extends CI_Controller {
             redirect('main_controller/room');
         } else {
             // Redirect back with an error message
-            $this->session->set_flashdata('error', 'Invalid Room PIN.');
-            redirect('main_controller');
+            $message = "Invalid PIN";
+        
         }
+        $this->session->set_flashdata("status","error");
+        $this->session->set_flashdata("msg",$message);
+        header("Location: " . $_SERVER["HTTP_REFERER"]);
     }    
     
     public function room() {
@@ -133,6 +136,7 @@ class main_controller extends CI_Controller {
         if ($roomPin) {
             // Update the room's validity status
             $this->quiz_model->invalidate_room($roomPin);
+            $this->quiz_model->exit_all_participants($roomPin);
     
             // Unset the roomPin session data
             $this->session->unset_userdata('roomPin');
@@ -167,6 +171,37 @@ class main_controller extends CI_Controller {
     
         // Redirect to the welcome page
         redirect('welcome');
+    }
+
+    public function get_room_status() {
+        // Retrieve the room PIN from the query parameters
+        $roomPin = $this->input->get('pin');
+
+        // Validate the room PIN
+        if ($roomPin) {
+            // Fetch the room status from the database
+            $this->db->select('isValid');
+            $this->db->where('pin', $roomPin);
+            $query = $this->db->get('rooms');
+
+            if ($query->num_rows() > 0) {
+                $result = $query->row();
+                $response = array(
+                    'isValid' => $result->isValid
+                );
+            } else {
+                $response = array(
+                    'isValid' => 0
+                );
+            }
+        } else {
+            $response = array(
+                'isValid' => 0 
+            );
+        }
+
+        // Return the response in JSON format
+        echo json_encode($response);
     }
     
 }

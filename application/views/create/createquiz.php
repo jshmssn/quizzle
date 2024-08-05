@@ -17,8 +17,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 			padding: 0;
 			height: 100vh;
 			overflow: hidden;
-			background: linear-gradient(45deg, #ec2d01, #6aa84f, #2986cc);
-			background-size: 600% 600%;
+			background-color: #D63232;
+ 			background-size: 600% 600%;
 			animation: gradientBG 10s ease infinite;
 		}
 

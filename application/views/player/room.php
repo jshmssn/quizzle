@@ -6,6 +6,8 @@
     <title>Waiting Area</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         .centered-container {
             text-align: center;
@@ -72,7 +74,7 @@
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
-                <form action="<?php echo site_url('main_controller/start_game'); ?>" method="post">
+                <form action="" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">
@@ -83,7 +85,6 @@
                 </form>
                 <h3 class="mt-4">Waiting for the host to start the game.</h3>
                 <a style="font-weight: 700;" href="<?php echo site_url('main_controller/leftroom') ?>" type="#">Left Room</a>
-
             </div>
         <?php else: ?>
             <p class="alert alert-warning">Room PIN could not be retrieved.</p>
@@ -94,7 +95,13 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         // Define a flag to control logging
-        const SHOW_LOGS = false; // Set to `true` to enable logging
+        const SHOW_LOGS = true; // Set to `true` to enable logging
+
+        // Flag to control the alert display
+        let alertShown = false;
+
+        // Flag to store the SweetAlert2 instance
+        let swalInstance = null;
 
         // Custom logging function
         function customLog(message) {
@@ -106,22 +113,16 @@
         // Function to fetch players
         function fetchPlayers() {
             $.ajax({
-                url: '<?php echo site_url("main_controller/get_players"); ?>', // Replace with your endpoint URL
+                url: '<?php echo site_url("main_controller/get_players"); ?>',
                 method: 'GET',
                 success: function(data) {
                     try {
-                        // Parse JSON if not already parsed
                         var response = typeof data === 'string' ? JSON.parse(data) : data;
-
-                        // Log the response to check its structure
                         customLog(response);
 
-                        // Check if 'players' is an array
                         if (Array.isArray(response.players)) {
-                            // Clear current player cards
                             $('#players-container').empty();
 
-                            // Update player cards with new data
                             if (response.players.length > 0) {
                                 response.players.forEach(function(player) {
                                     $('#players-container').append('<div class="player-card">' + $('<div>').text(player.name).html() + '</div>');
@@ -142,11 +143,77 @@
             });
         }
 
-        // Fetch players every 3 seconds
-        setInterval(fetchPlayers, 3000);
+        function checkRoomStatus() {
+            var pin = $('input[name="room_pin"]').val();
+
+            $.ajax({
+                url: '<?php echo site_url("main_controller/get_room_status"); ?>',
+                method: 'GET',
+                data: { pin: pin },
+                success: function(data) {
+                    try {
+                        var response = typeof data === 'string' ? JSON.parse(data) : data;
+                        customLog(response);
+                        
+                        if (response.isValid === "0" && !alertShown) {
+                            swalInstance = Swal.fire({
+                                title: "The host has left the room.",
+                                text: "Click okay to leave.",
+                                showDenyButton: false,
+                                showCancelButton: false,
+                                confirmButtonText: "Okay",
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = "<?php echo site_url('/'); ?>";
+                                }
+                            });
+                            alertShown = true; // Set the flag to true to prevent further alerts
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse response:', error);
+                    }
+                },
+                error: function() {
+                    console.error('Failed to fetch room status.');
+                }
+            });
+        }
+
+        // Function to handle ESC key press
+        function handleEscKey(event) {
+            if (event.key === 'Escape' && swalInstance) {
+                swalInstance.close(); // Close the current Swal instance
+                swalInstance = Swal.fire({
+                    title: "The host has left the room.",
+                    text: "You need to confirm to leave.",
+                    showDenyButton: false,
+                    showCancelButton: false,
+                    confirmButtonText: "Okay",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "<?php echo site_url('/'); ?>";
+                    }
+                });
+            }
+        }
+
+        // Add event listener for ESC key
+        document.addEventListener('keydown', handleEscKey);
+
+        // Fetch players and check room status every 3 seconds
+        setInterval(function() {
+            fetchPlayers();
+            checkRoomStatus();
+        }, 3000);
 
         // Initial fetch
         fetchPlayers();
+        checkRoomStatus();
     </script>
+
 </body>
 </html>

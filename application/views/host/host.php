@@ -82,7 +82,7 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
-                    <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel</a>
+                    <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel Room</a>
                 </form>
             </div>
         <?php else: ?>
@@ -142,8 +142,8 @@
             });
         }
 
-        // Fetch players every 3 seconds
-        setInterval(fetchPlayers, 3000);
+        // Fetch players every 2 seconds
+        setInterval(fetchPlayers, 2000);
 
         // Initial fetch
         fetchPlayers();
