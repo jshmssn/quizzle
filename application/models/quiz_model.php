@@ -7,13 +7,14 @@ class quiz_model extends CI_Model {
         $this->load->database();
     }
 
-    public function save_question($questionText, $answers, $correctAnswerIndex) {
+    public function save_question($questionText, $answers, $correctAnswerIndex, $roomPin) {
         // Insert the question
         $data = array(
-            'question_text' => $questionText
+            'question_text' => $questionText,
+            'room_pin' => $roomPin // Add room_pin to the question data
         );
         $this->db->insert('questions', $data);
-
+    
         if ($this->db->affected_rows() > 0) {
             $questionId = $this->db->insert_id();
             
@@ -30,10 +31,10 @@ class quiz_model extends CI_Model {
             // Check if answers were inserted successfully
             return ($this->db->affected_rows() > 0);
         }
-
+    
         return false;
     }
-
+    
     public function save_room($roomId, $pin) {
         // Insert room_id, PIN, and isValid into rooms table
         $data = array(
@@ -127,6 +128,35 @@ class quiz_model extends CI_Model {
     
         return isset($result['isValid']) ? $result['isValid'] : null;
     }
+
+    // Fetch a question and its answers
+    public function get_question() {
+        $this->db->order_by('id');
+        $this->db->limit(1);
+        $query = $this->db->get('questions');
+        return $query->row_array();
+    }
+
+    // Fetch answers for a given question
+    public function get_answers($question_id) {
+        $this->db->where('question_id', $question_id);
+        $query = $this->db->get('answers');
+        return $query->result_array();
+    }
+
+    // Fetch the correct answer for a given question
+    public function get_correct_answer($question_id) {
+        $this->db->where('question_id', $question_id);
+        $this->db->where('is_correct', 1);
+        $query = $this->db->get('answers');
+        return $query->row_array(); // Assuming there's only one correct answer
+    }
     
+    // Fetch all players and their scores
+    public function get_players() {
+        $this->db->order_by('scores', 'DESC');
+        $query = $this->db->get('participants');
+        return $query->result_array();
+    }
 }
 ?>

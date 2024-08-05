@@ -36,8 +36,8 @@ class main_controller extends CI_Controller {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
-    
-                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex)) {
+                
+                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $pin)) {
                     $success = false;
                     break;
                 }
@@ -66,7 +66,7 @@ class main_controller extends CI_Controller {
         }
     
         redirect('main_controller/hostgame');
-    }
+    }    
     
     public function hostgame() {
         $roomPin = $this->session->userdata('roomPin');
@@ -108,14 +108,14 @@ class main_controller extends CI_Controller {
             // Redirect to the room
             redirect('main_controller/room');
         } else {
-            // Redirect back with an error message
-            $message = "Invalid PIN";
-        
+            // Set an error message in flashdata
+            $this->session->set_flashdata("status", "error");
+            $this->session->set_flashdata("msg", "Invalid PIN");
+    
+            // Redirect back to the join page or previous page
+            redirect($_SERVER["HTTP_REFERER"]);
         }
-        $this->session->set_flashdata("status","error");
-        $this->session->set_flashdata("msg",$message);
-        header("Location: " . $_SERVER["HTTP_REFERER"]);
-    }    
+    }
     
     public function room() {
         // Check if player is logged in by checking session data
@@ -176,34 +176,123 @@ class main_controller extends CI_Controller {
     public function get_room_status() {
         // Retrieve the room PIN from the query parameters
         $roomPin = $this->input->get('pin');
-
+    
         // Validate the room PIN
         if ($roomPin) {
             // Fetch the room status from the database
-            $this->db->select('isValid');
+            $this->db->select('isValid, hasStarted');
             $this->db->where('pin', $roomPin);
             $query = $this->db->get('rooms');
-
+    
             if ($query->num_rows() > 0) {
                 $result = $query->row();
                 $response = array(
-                    'isValid' => $result->isValid
+                    'isValid' => $result->isValid,
+                    'hasStarted' => $result->hasStarted
                 );
             } else {
                 $response = array(
-                    'isValid' => 0
+                    'isValid' => 0,
+                    'hasStarted' => 0
                 );
             }
         } else {
             $response = array(
-                'isValid' => 0 
+                'isValid' => 0,
+                'hasStarted' => 0
             );
         }
-
+    
         // Return the response in JSON format
         echo json_encode($response);
     }
     
+    public function quiz_player() {
+        // Get a random question
+        $question = $this->quiz_model->get_question();
+        $question_text = $question['question_text'];
+        $question_id = $question['id'];
+    
+        // Get answers for the question
+        $answers = $this->quiz_model->get_answers($question_id);
+    
+        // Shuffle the answers array to randomize the order
+        shuffle($answers);
+    
+        // Get all players and their scores
+        $players = $this->quiz_model->get_players();
+    
+        // Find the correct answer
+        $correct_answer = null;
+        foreach ($answers as $answer) {
+            if ($answer['is_correct']) {
+                $correct_answer = $answer['answer_text'];
+                break;
+            }
+        }
+    
+        // Prepare data for the view
+        $data['question'] = $question_text;
+        $data['answers'] = $answers; // Pass the shuffled answers
+        $data['correct_answer'] = $correct_answer; // Include the correct answer in the data
+        $data['players'] = $players;
+    
+        // Load the view with data
+        $this->load->view('player/quiz_view', $data);
+    }    
+
+    public function quiz_host() {
+        // Get a random question
+        $question = $this->quiz_model->get_question();
+        $question_text = $question['question_text'];
+        $question_id = $question['id'];
+    
+        // Get answers for the question
+        $answers = $this->quiz_model->get_answers($question_id);
+    
+        // Get all players and their scores
+        $players = $this->quiz_model->get_players();
+    
+        // Find the correct answer
+        $correct_answer = null;
+        foreach ($answers as $answer) {
+            if ($answer['is_correct']) {
+                $correct_answer = $answer['answer_text'];
+                break;
+            }
+        }
+    
+        // Prepare data for the view
+        $data['question'] = $question_text;
+        $data['answers'] = array_map(function($answer) {
+            return $answer['answer_text'];
+        }, $answers);
+        $data['correct_answer'] = $correct_answer; // Include the correct answer in the data
+        $data['players'] = $players;
+    
+        // Example: Fetch the room PIN from the session or input
+        $roomPin = $this->session->userdata('roomPin'); // Ensure this matches how you're storing the room PIN
+    
+        if ($roomPin) {
+            // Update the hasStarted field to 1 where the pin matches
+            $this->db->where('pin', $roomPin);
+            $this->db->set('hasStarted', 1);
+            $updateSuccess = $this->db->update('rooms');
+    
+            if (!$updateSuccess) {
+                // Handle the error if the update failed
+                $this->session->set_flashdata('status', 'error');
+                $this->session->set_flashdata('msg', 'Failed to update room status.');
+            }
+        } else {
+            // Handle the case where roomPin is not set or is invalid
+            $this->session->set_flashdata('status', 'error');
+            $this->session->set_flashdata('msg', 'Room PIN is not set.');
+        }
+    
+        // Load the view with data
+        $this->load->view('host/quiz_view_host', $data);
+    }
 }
 
 ?>

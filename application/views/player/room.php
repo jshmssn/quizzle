@@ -95,7 +95,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         // Define a flag to control logging
-        const SHOW_LOGS = true; // Set to `true` to enable logging
+        const SHOW_LOGS = false; // Set to `true` to enable logging
 
         // Flag to control the alert display
         let alertShown = false;
@@ -143,6 +143,7 @@
             });
         }
 
+        // Function to check room status
         function checkRoomStatus() {
             var pin = $('input[name="room_pin"]').val();
 
@@ -181,34 +182,11 @@
             });
         }
 
-        // Function to handle ESC key press
-        function handleEscKey(event) {
-            if (event.key === 'Escape' && swalInstance) {
-                swalInstance.close(); // Close the current Swal instance
-                swalInstance = Swal.fire({
-                    title: "The host has left the room.",
-                    text: "You need to confirm to leave.",
-                    showDenyButton: false,
-                    showCancelButton: false,
-                    confirmButtonText: "Okay",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = "<?php echo site_url('/'); ?>";
-                    }
-                });
-            }
-        }
-
-        // Add event listener for ESC key
-        document.addEventListener('keydown', handleEscKey);
-
-        // Fetch players and check room status every 3 seconds
+        // Fetch players and check room status every .5 seconds
         setInterval(function() {
             fetchPlayers();
             checkRoomStatus();
-        }, 3000);
+        }, 500);
 
         // Initial fetch
         fetchPlayers();

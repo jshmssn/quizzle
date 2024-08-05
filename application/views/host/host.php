@@ -6,6 +6,9 @@
     <title>Waiting Area</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
     <style>
         .centered-container {
             text-align: center;
@@ -72,7 +75,7 @@
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
-                <form action="<?php echo site_url('main_controller/start_game'); ?>" method="post">
+                <form action="<?php echo site_url('main_controller/quiz_host'); ?>" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">
@@ -95,6 +98,12 @@
     <script>
         // Define a flag to control logging
         const SHOW_LOGS = false; // Set to `true` to enable logging
+
+        // Flag to control the alert display
+        let alertShown = false;
+
+        // Flag to store the SweetAlert2 instance
+        let swalInstance = null;
 
         // Custom logging function
         function customLog(message) {
@@ -142,11 +151,55 @@
             });
         }
 
-        // Fetch players every 2 seconds
-        setInterval(fetchPlayers, 2000);
+        // Function to check room status
+        function checkRoomStatus() {
+            var pin = $('input[name="room_pin"]').val();
+
+            $.ajax({
+                url: '<?php echo site_url("main_controller/get_room_status"); ?>',
+                method: 'GET',
+                data: { pin: pin },
+                success: function(data) {
+                    try {
+                        var response = typeof data === 'string' ? JSON.parse(data) : data;
+                        customLog(response);
+                        
+                        if ((response.isValid === "0" || response.hasStarted === "1") && !alertShown) {
+                            swalInstance = Swal.fire({
+                                title: "Room is not available.",
+                                text: "Click okay to leave.",
+                                showDenyButton: false,
+                                showCancelButton: false,
+                                confirmButtonText: "Okay",
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = "<?php echo site_url('/'); ?>";
+                                }
+                            });
+                            alertShown = true; // Set the flag to true to prevent further alerts
+                        }
+
+                    } catch (error) {
+                        console.error('Failed to parse response:', error);
+                    }
+                },
+                error: function() {
+                    console.error('Failed to fetch room status.');
+                }
+            });
+        }
+
+        // Fetch players and check room status every .5 seconds
+        setInterval(function() {
+            fetchPlayers();
+            checkRoomStatus();
+        }, 500);
 
         // Initial fetch
         fetchPlayers();
+        checkRoomStatus();
     </script>
 </body>
 </html>
