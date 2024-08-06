@@ -74,31 +74,32 @@ class quiz_model extends CI_Model {
         // Check if the name already exists for this room_pin
         $original_name = $name;
         $counter = 1;
-    
+        
         while ($this->is_player_name_exists($name, $room_pin)) {
             // Append the counter to the original name
             $name = $original_name . $counter;
             $counter++;
         }
-    
+        
         // Insert the unique player name into the 'participants' table
         $data = array(
             'name' => $name,
             'room_pin' => $room_pin
         );
-    
+        
         $this->db->insert('participants', $data);
-    }
-    
+        
+        // Return the unique player name
+        return $name;
+    }    
     
     public function validate_room_pin($room_pin) {
-        // Query the database to check if the room_pin exists and is valid
+        // Ensure the room_pin is properly sanitized/validated if necessary
         $this->db->where('pin', $room_pin);
-        $this->db->where('isValid', 1); // Check if room is valid
         $query = $this->db->get('rooms');
         
         return $query->num_rows() > 0;
-    }
+    }    
     
     public function invalidate_room($roomPin) {
         $data = array('isValid' => 0);
@@ -109,15 +110,19 @@ class quiz_model extends CI_Model {
     }
     
     public function left_participant($playerName, $roomPin) {
-        // Delete the participant based on the player name and room PIN
         $this->db->where('name', $playerName);
         $this->db->where('room_pin', $roomPin);
         $this->db->delete('participants');
     }
-    
+
     public function exit_all_participants($roomPin){
         $this->db->where('room_pin', $roomPin);
         $this->db->delete('participants');
+    }
+
+    public function delete_room_questions($roomPin) {
+        $this->db->where('room_pin', $roomPin);
+        $this->db->delete('questions');
     }
 
     public function is_room_valid($roomPin) {
@@ -158,5 +163,6 @@ class quiz_model extends CI_Model {
         $query = $this->db->get('participants');
         return $query->result_array();
     }
+    
 }
 ?>

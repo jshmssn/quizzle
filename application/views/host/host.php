@@ -6,9 +6,8 @@
     <title>Waiting Area</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
         .centered-container {
             text-align: center;
@@ -57,26 +56,26 @@
 </head>
 <body>
     <div class="container mt-5">
-        <?php if ($this->session->flashdata('status') === 'success'): ?>
-            <div class="alert alert-success">
-                <?php echo htmlspecialchars($this->session->flashdata('msg'), ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-        <?php elseif ($this->session->flashdata('status') === 'error'): ?>
-            <div class="alert alert-danger">
-                <?php echo htmlspecialchars($this->session->flashdata('msg'), ENT_QUOTES, 'UTF-8'); ?>
-            </div>
+        <?php if ($this->session->flashdata('status')): ?>
+            <script>
+                iziToast[<?php echo $this->session->flashdata('status'); ?>]({
+                    title: '<?php echo htmlspecialchars($this->session->flashdata('status') === 'success' ? 'Success' : 'Error', ENT_QUOTES, 'UTF-8'); ?>',
+                    message: '<?php echo htmlspecialchars($this->session->flashdata('msg'), ENT_QUOTES, 'UTF-8'); ?>',
+                    position: 'topRight'
+                });
+            </script>
         <?php endif; ?>
 
-        <?php if ($this->session->userdata('roomPin')): ?>
+        <?php if ($this->session->userdata('room_pin')): ?>
             <h3 class="mb-4 text-center">Room PIN</h3>
             <div class="form-group">
-                <input type="text" class="form-control text-center form-control-lg" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>" readonly>
+                <input type="text" id="room-pin" class="form-control text-center form-control-lg" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>" readonly>
             </div>
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
                 <form action="<?php echo site_url('main_controller/quiz_host'); ?>" method="post">
-                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">
                         <div id="players-container" class="players-container">
@@ -96,110 +95,104 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // Define a flag to control logging
-        const SHOW_LOGS = false; // Set to `true` to enable logging
+    // Define a flag to control logging
+    const SHOW_LOGS = false; // Set to `true` to enable logging
 
-        // Flag to control the alert display
-        let alertShown = false;
+    // Custom logging function
+    function customLog(message) {
+        if (SHOW_LOGS) {
+            console.log(message);
+        }
+    }
 
-        // Flag to store the SweetAlert2 instance
-        let swalInstance = null;
+    // Get the room pin and player name
+    const roomPin = document.getElementById('room-pin').value;
+    const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
 
-        // Custom logging function
-        function customLog(message) {
-            if (SHOW_LOGS) {
-                console.log(message);
+    // WebSocket URL, adjust as necessary
+    const socketUrl = `ws://${window.location.hostname}:3000`;
+    const socket = new WebSocket(socketUrl);
+
+    let isSocketOpen = false;
+
+    // Handle WebSocket open event
+    socket.onopen = function() {
+        console.log('WebSocket connection established.');
+        isSocketOpen = true;
+        sendJoinRoomRequest();
+    };
+
+    // Handle WebSocket message event
+    socket.onmessage = function(event) {
+        console.log('Received WebSocket message:', event.data);
+        try {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'updatePlayers') {
+                updatePlayers(message.players);
+                iziToast.success({
+                    title: 'Player Joined',
+                    message: 'A new player has joined the room.',
+                    position: 'topRight'
+                });
+            } else if (message.type === 'roomStatus') {
+                handleRoomStatus(message);
             }
+        } catch (e) {
+            console.error('Error processing WebSocket message:', e);
         }
+    };
 
-        // Function to fetch players
-        function fetchPlayers() {
-            $.ajax({
-                url: '<?php echo site_url("main_controller/get_players"); ?>', // Replace with your endpoint URL
-                method: 'GET',
-                success: function(data) {
-                    try {
-                        // Parse JSON if not already parsed
-                        var response = typeof data === 'string' ? JSON.parse(data) : data;
+    // Handle WebSocket close event
+    socket.onclose = function() {
+        console.log('WebSocket connection closed.');
+        isSocketOpen = false;
+    };
 
-                        // Log the response to check its structure
-                        customLog(response);
+    // Handle WebSocket error event
+    socket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
 
-                        // Check if 'players' is an array
-                        if (Array.isArray(response.players)) {
-                            // Clear current player cards
-                            $('#players-container').empty();
+    // Send request to join room
+    function sendJoinRoomRequest() {
+        if (isSocketOpen) {
+            const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName });
+            socket.send(joinMessage);
+        } else {
+            console.log('WebSocket is not open. Cannot send message.');
+        }
+    }
 
-                            // Update player cards with new data
-                            if (response.players.length > 0) {
-                                response.players.forEach(function(player) {
-                                    $('#players-container').append('<div class="player-card">' + $('<div>').text(player.name).html() + '</div>');
-                                });
-                            } else {
-                                $('#players-container').append('<div class="player-card">No participants yet.</div>');
-                            }
-                        } else {
-                            console.error('Invalid response format.');
-                        }
-                    } catch (error) {
-                        console.error('Failed to parse response:', error);
-                    }
-                },
-                error: function() {
-                    console.error('Failed to fetch players.');
-                }
+    // Update player list
+    function updatePlayers(players) {
+        $('#players-container').empty();
+        if (players && players.length > 0) {
+            players.forEach(function(player) {
+                const displayName = player.name; // Removed (You) label
+                $('#players-container').append('<div class="player-card">' + $('<div>').text(displayName).html() + '</div>');
             });
+        } else {
+            $('#players-container').append('<div class="player-card">No participants yet.</div>');
         }
+    }
 
-        // Function to check room status
-        function checkRoomStatus() {
-            var pin = $('input[name="room_pin"]').val();
-
-            $.ajax({
-                url: '<?php echo site_url("main_controller/get_room_status"); ?>',
-                method: 'GET',
-                data: { pin: pin },
-                success: function(data) {
-                    try {
-                        var response = typeof data === 'string' ? JSON.parse(data) : data;
-                        customLog(response);
-                        
-                        if ((response.isValid === "0" || response.hasStarted === "1") && !alertShown) {
-                            swalInstance = Swal.fire({
-                                title: "Room is not available.",
-                                text: "Click okay to leave.",
-                                showDenyButton: false,
-                                showCancelButton: false,
-                                confirmButtonText: "Okay",
-                                allowOutsideClick: false,
-                                allowEscapeKey: false,
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "<?php echo site_url('/'); ?>";
-                                }
-                            });
-                            alertShown = true; // Set the flag to true to prevent further alerts
-                        }
-
-                    } catch (error) {
-                        console.error('Failed to parse response:', error);
-                    }
-                },
-                error: function() {
-                    console.error('Failed to fetch room status.');
-                }
-            });
+    // Handle room status updates
+    function handleRoomStatus(message) {
+        if (message.hasStarted === 1) {
+            window.location.href = "/game_controller/start_game";
+        } else if (message.isValid === 0) {
+            console.warn("Room is not available. Redirecting...");
+            window.location.href = "<?php echo site_url('main_controller/index'); ?>";
         }
+    }
 
-        // Fetch players and check room status every .5 seconds
-        setInterval(function() {
-            fetchPlayers();
-            checkRoomStatus();
-        }, 500);
-
-        // Initial fetch
-        fetchPlayers();
-        checkRoomStatus();
+    // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
+    setInterval(function() {
+        if (!isSocketOpen) {
+            console.error('WebSocket is not open. Polling might be needed.');
+        }
+    }, 500);
     </script>
 </body>
 </html>

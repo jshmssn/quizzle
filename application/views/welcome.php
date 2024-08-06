@@ -1,14 +1,11 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to WebName</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Welcome to Quizzle</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.min.js" integrity="sha512-Zq9o+E00xhhR/7vJ49mxFNJ0KQw1E1TMWkPTxrWcnpfEFDEXgUiwJHIKit93EW/XxE31HSI5GEOW06G6BF1AtA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/css/iziToast.css" integrity="sha512-DIW4FkYTOxjCqRt7oS9BFO+nVOwDL4bzukDyDtMO7crjUZhwpyrWBFroq+IqRe6VnJkTpRAS6nhDvf0w+wHmxg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -63,8 +60,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             background-color: #0056b3;
         }
 
-        input{
+        input {
             text-align: center;
+        }
+
+        .form-label {
+            font-weight: bold;
+        }
+
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #007bff;
         }
     </style>
 </head>
@@ -72,14 +78,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div id="container">
         <div id="body">
             <h1 class="mb-4">Welcome Players!</h1>
-            <form action="<?php echo site_url('main_controller/join'); ?>" method="post">
+            <form action="<?php echo site_url('main_controller/join'); ?>" method="post" id="joinForm">
                 <div class="mb-3">
                     <label for="displayName" class="form-label">Player Name</label>
-                    <input type="text" name="name" id="displayName" class="form-control">
+                    <input type="text" name="name" id="displayName" class="form-control" required aria-required="true">
                 </div>
                 <div class="mb-3">
                     <label for="roomId" class="form-label">Room PIN</label>
-                    <input type="number" name="room_pin" maxlength="5" id="roomId" class="form-control">
+                    <input type="number" name="room_pin" maxlength="4" id="roomId" class="form-control" required aria-required="true">
                 </div>
                 <button type="submit" class="btn btn-primary">Join</button>
             </form>
@@ -88,13 +94,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     <script>
         // JavaScript to limit input length
-        const input = document.getElementById('roomId');
-        const maxLength = 4;
-
-        input.addEventListener('input', () => {
-            if (input.value.length > maxLength) {
-                input.value = input.value.slice(0, maxLength);
-            }
+        document.getElementById('roomId').addEventListener('input', function() {
+            this.value = this.value.slice(0, 4);
         });
 
         // Check for flash data

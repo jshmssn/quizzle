@@ -22,7 +22,7 @@
     <div class="container">
         <div class="player-list">
             <form action="">
-                <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('roomPin'), ENT_QUOTES, 'UTF-8'); ?>">
+                <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
             </form>
             <h3>Player List - Score</h3>
             <ul>
@@ -115,7 +115,7 @@
                         var response = typeof data === 'string' ? JSON.parse(data) : data;
                         customLog(response);
                         
-                        if (response.hasStarted === "0" && !alertShown) {
+                        if (response.hasStarted === '0' && !alertShown) {
                             swalInstance = Swal.fire({
                                 title: "The room is not available.",
                                 text: "Click okay to leave.",

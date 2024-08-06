@@ -123,7 +123,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
     <script>
         let quizIndex = 1;
-        const colors = ['#f8d7da', '#d4edda', '#d1ecf1', '#fff3cd', '#f5f5f5'];
+        const colors = ['#f5f5f5', '#f5f5f5', '#f5f5f5', '#f5f5f5', '#f5f5f5'];
 
         document.getElementById('add-quiz').addEventListener('click', function() {
             quizIndex++;
@@ -171,6 +171,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         document.getElementById('quiz-container').addEventListener('click', function(event) {
             if (event.target && event.target.classList.contains('remove-btn')) {
                 if (confirm("Are you sure you want to remove Question #" + quizIndex + "?")) {
+                    quizIndex--;
                     event.target.parentElement.remove();
                 }
             }
