@@ -7,6 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
         .centered-container {
             text-align: center;
@@ -53,7 +55,13 @@
         }
     </style>
 </head>
-<body>
+<script type="text/javascript"> 
+    function disableRightClick() 
+    {  
+        return false; 
+    } 
+</script>
+<body oncontextmenu="return disableRightClick()">
     <div class="container mt-5">
         <div id="flash-messages"></div>
         <div id="room-info">
@@ -100,6 +108,24 @@
 
                 if (message.type === 'updatePlayers') {
                     updatePlayers(message.players);
+                    iziToast.success({
+                        title: 'Notice',
+                        message: 'A player has joined the room.',
+                        position: 'topRight'
+                    });
+                } else if (message.type === 'leftPlayers') {
+                    updatePlayers(message.players);
+                    iziToast.error({
+                        title: 'Notice',
+                        message: 'A player has left the room.',
+                        position: 'topRight'
+                    });
+                } else if (message.type === 'reconnected') {
+                    iziToast.info({
+                        title: 'Notice',
+                        message: message.message,
+                        position: 'topRight'
+                    });
                 } else if (message.type === 'roomStatus') {
                     handleRoomStatus(message);
                 }
@@ -108,6 +134,17 @@
             }
         };
 
+        socket.onclose = function() {
+            console.log('WebSocket connection closed.');
+            isSocketOpen = false;
+            // Attempt to reconnect
+            setTimeout(() => {
+                if (!isSocketOpen) {
+                    location.reload(); // Reload the page to attempt reconnection
+                }
+            }, 3000); // Adjust the delay as necessary
+        };
+        
         // Handle WebSocket close event
         socket.onclose = function() {
             console.log('WebSocket connection closed.');
@@ -124,8 +161,6 @@
             if (isSocketOpen) {
                 const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName });
                 socket.send(joinMessage);
-            } else {
-                console.log('WebSocket is not open. Cannot send message.');
             }
         }
 
@@ -146,7 +181,7 @@
         // Handle room status updates
         function handleRoomStatus(message) {
             if (message.hasStarted === 1) {
-                window.location.href = "/game_controller/start_game";
+                window.location.href = "<?php echo site_url('main_controller/start_game'); ?>";
             } else if (message.isValid === 0 && !alertShown) {
                 Swal.fire({
                     title: "Room is not available.",

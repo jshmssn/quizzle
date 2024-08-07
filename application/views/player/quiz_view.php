@@ -6,28 +6,110 @@
     <title>Quiz</title>
     <style>
         /* Basic styling */
-        .container { display: flex; }
-        .player-list { width: 20%; }
-        .content { width: 80%; padding: 20px; }
-        .question { margin-bottom: 20px; }
-        .timer { font-size: 24px; margin-bottom: 20px; }
-        .answers button { margin: 5px; }
-        .waiting-message, .correct-answer { margin-top: 20px; font-size: 18px; font-weight: bold; display: none; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .content {
+            width: 70%;
+            padding: 20px;
+            background-color: #fff;
+        }
+        .question {
+            margin-bottom: 20px;
+        }
+        .question h2 {
+            font-size: 24px;
+            margin: 0;
+            color: #007bff;
+        }
+        .timer {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .answers button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .answers button:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .answers .selected {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .waiting-message, .correct-answer {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+        }
+        .waiting-message {
+            color: #ffc107;
+        }
+        .correct-answer {
+            color: #28a745;
+        }
+        .player-list {
+            flex: 1;
+            padding: 20px;
+            border-right: 2px solid #e0e0e0;
+        }
+        .player-list h3 {
+            margin-top: 0;
+            color: #444;
+            font-size: 22px;
+        }
+        .player-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .player-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+        }
+        .player-list li.highlighted {
+            background-color: #e0f7fa;
+            font-weight: bold;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
-<body>
+<script type="text/javascript">
+    function disableRightClick() {  
+        return false; 
+    } 
+</script>
+<body oncontextmenu="return disableRightClick()">
     <div class="container">
         <div class="player-list">
-            <form action="">
-                <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
-            </form>
-            <h3>Player List - Score</h3>
+            <h3>Player List - Scores</h3>
             <ul>
                 <?php foreach($players as $player): ?>
-                    <li><?= htmlspecialchars($player['name'], ENT_QUOTES, 'UTF-8') ?> - <?= htmlspecialchars($player['scores'], ENT_QUOTES, 'UTF-8') ?></li>
+                    <li class="<?= ($player['name'] === $correct_answer) ? 'highlighted' : '' ?>">
+                        <?= htmlspecialchars($player['name'], ENT_QUOTES, 'UTF-8') ?>
+                        <span><?= htmlspecialchars($player['scores'], ENT_QUOTES, 'UTF-8') ?></span>
+                    </li>
                 <?php endforeach; ?>
             </ul>
         </div>
@@ -35,7 +117,7 @@
             <div class="question">
                 <h2><?= htmlspecialchars($question, ENT_QUOTES, 'UTF-8') ?></h2>
             </div>
-            <div class="timer" id="timer">Time left: 00</div>
+            <div class="timer" id="timer">Time left: --</div>
             <div class="answers">
                 <?php foreach($answers as $answer): ?>
                     <button class="answer-button" data-answer="<?= htmlspecialchars($answer['answer_text'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($answer['answer_text'], ENT_QUOTES, 'UTF-8') ?></button>
@@ -45,126 +127,83 @@
             <div class="correct-answer" id="correctAnswer">The correct answer is: <?= htmlspecialchars($correct_answer, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
     </div>
-    <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script>
-        // Define a flag to control logging
-        const SHOW_LOGS = false; // Set to `true` to enable logging
+        document.addEventListener('DOMContentLoaded', () => {
+            const timerElement = document.getElementById('timer');
+            const waitingMessage = document.getElementById('waitingMessage');
+            const correctAnswer = document.getElementById('correctAnswer');
+            let questionId = 33; // Replace with the actual question ID or set dynamically
 
-        // Flag to store the SweetAlert2 instance
-        let swalInstance = null;
+            // Fetch the timer and question details
+            async function fetchQuestionDetails() {
+                try {
+                    const response = await fetch(`http://localhost:3000/get-time?questionId=${questionId}`);
+                    const data = await response.json();
 
-        // Custom logging function
-        function customLog(message) {
-            if (SHOW_LOGS) {
-                console.log(message);
-            }
-        }
-
-        let timeLeft = 10;
-        let timerExpired = false;
-        const timerElement = document.getElementById('timer');
-        const waitingMessage = document.getElementById('waitingMessage');
-        const correctAnswer = document.getElementById('correctAnswer');
-        let alertShown = false;
-
-        // Function to display the correct answer
-        function displayCorrectAnswer() {
-            correctAnswer.style.display = 'block';
-        }
-
-        // Function to handle answer submission
-        function handleAnswerSubmission() {
-            // Disable all answer buttons
-            document.querySelectorAll('.answer-button').forEach(button => button.disabled = true);
-
-            // Check the number of players
-            const playerCount = <?php echo count($players); ?>;
-
-            if (timerExpired) {
-                // Timer has run out, do not display waiting message
-                proceedToNextQuestion();
-            } else if (playerCount > 1) {
-                // More than one player, display waiting message
-                waitingMessage.style.display = 'block';
-            } else {
-                // Only one player, proceed to the next question
-                proceedToNextQuestion();
-            }
-        }
-
-        // Function to proceed to the next question
-        function proceedToNextQuestion() {
-            // Code to fetch and display the next question
-            console.log("Proceeding to the next question...");
-            // You might need to make an AJAX request or redirect here
-        }
-
-        // Function to check room status
-        function checkIfQuizStarted() {
-            var pin = $('input[name="room_pin"]').val();
-
-            $.ajax({
-                url: '<?php echo site_url("main_controller/get_room_status"); ?>',
-                method: 'GET',
-                data: { pin: pin },
-                success: function(data) {
-                    try {
-                        var response = typeof data === 'string' ? JSON.parse(data) : data;
-                        customLog(response);
-                        
-                        if (response.hasStarted === '0' && !alertShown) {
-                            swalInstance = Swal.fire({
-                                title: "The room is not available.",
-                                text: "Click okay to leave.",
-                                showDenyButton: false,
-                                showCancelButton: false,
-                                confirmButtonText: "Okay",
-                                allowOutsideClick: false,
-                                allowEscapeKey: false,
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = "<?php echo site_url('/'); ?>";
-                                }
-                            });
-                            alertShown = true;
-                        }
-                    } catch (error) {
-                        console.error('Failed to parse response:', error);
+                    if (response.ok) {
+                        const endTime = data.endTime;
+                        startTimer(endTime);
+                    } else {
+                        console.error('Failed to fetch question details:', data.error);
+                        timerElement.innerHTML = "Error fetching timer.";
                     }
-                },
-                error: function() {
-                    console.error('Failed to fetch room status.');
+                } catch (error) {
+                    console.error('Error fetching question details:', error);
+                    timerElement.innerHTML = "Error fetching timer.";
                 }
-            });
-        }
-
-        // Event listener for answer buttons
-        document.querySelectorAll('.answer-button').forEach(button => {
-            button.addEventListener('click', () => {
-                handleAnswerSubmission();
-                // Additional code to handle answer submission can be added here
-            });
-        });
-
-        // Timer countdown logic
-        const timer = setInterval(() => {
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                timerExpired = true;
-                timerElement.innerHTML = "Time's up!";
-                displayCorrectAnswer();
-                handleAnswerSubmission(); // Ensure this is called when time runs out
-            } else {
-                timerElement.innerHTML = `Time left: ${timeLeft}`;
             }
-            timeLeft--;
-        }, 1000);
 
-        // Check if the quiz has started every second
-        setInterval(checkIfQuizStarted, 1000);
+            // Function to start the timer
+            function startTimer(endTime) {
+                const timerInterval = setInterval(() => {
+                    const timeLeft = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerElement.innerHTML = "Time's up!";
+                        displayCorrectAnswer();
+                    } else {
+                        if (timeLeft >= 60) {
+                            const minutes = Math.floor(timeLeft / 60);
+                            const remainingSeconds = timeLeft % 60;
+                            timerElement.innerHTML = `Time left: ${minutes}m ${remainingSeconds}s`;
+                        } else {
+                            timerElement.innerHTML = `Time left: ${timeLeft}s`;
+                        }
+                    }
+                }, 1000);
+            }
+
+            // Function to display the correct answer
+            function displayCorrectAnswer() {
+                correctAnswer.style.display = 'block';
+            }
+
+            // Function to handle answer selection
+            function handleAnswerSelection() {
+                document.querySelectorAll('.answer-button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        // Mark selected answer
+                        document.querySelectorAll('.answer-button').forEach(btn => btn.classList.remove('selected'));
+                        this.classList.add('selected');
+
+                        // Show waiting message
+                        waitingMessage.style.display = 'block';
+
+                        // Disable all answer buttons
+                        document.querySelectorAll('.answer-button').forEach(btn => btn.disabled = true);
+                    });
+                });
+            }
+
+            // Fetch and start the timer when the page loads
+            fetchQuestionDetails();
+
+            // Initialize answer selection handling
+            handleAnswerSelection();
+        });
     </script>
 </body>
 </html>

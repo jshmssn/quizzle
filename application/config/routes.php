@@ -56,6 +56,8 @@ $route['translate_uri_dashes'] = FALSE;
 // Routes for ApiController
 $route['api/fetch_node'] = 'api/ApiController/fetch_from_node';
 $route['test/hello'] = 'TestController/hello';
+$route['start-timer'] = 'time_controller/start_timer';
+
 
 // Example of a route that captures an ID parameter
 // $route['api/item/(:num)'] = 'ApiController/item/$1'; // Maps to ApiController::item($id)

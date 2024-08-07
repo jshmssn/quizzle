@@ -58,7 +58,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         }
     </style>
 </head>
-<body>
+<script type="text/javascript"> 
+    function disableRightClick() 
+    {  
+        return false; 
+    } 
+</script>
+<body oncontextmenu="return disableRightClick()">
     <div id="container">
         <div id="body">
             <h1 class="mb-4">Create your quiz</h1>

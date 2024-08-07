@@ -27,8 +27,9 @@ db.connect((err) => {
   console.log('Connected to database.');
 });
 
-// Store client information
-const clients = new Map();
+// Store client information and player statuses
+const clients = new Map(); // Maps WebSocket to client info
+const playerStatuses = new Map(); // Maps player name to status
 
 // WebSocket event handling
 wss.on('connection', (ws) => {
@@ -43,30 +44,23 @@ wss.on('connection', (ws) => {
       const playerName = msg.playerName;
 
       clients.set(ws, { roomPin, playerName });
+      playerStatuses.set(playerName, { ws, roomPin, lastSeen: Date.now() });
 
       try {
         const players = await getPlayers(roomPin);
         const roomStatus = await getRoomStatus(roomPin);
 
+        // Broadcast updated player list to all clients in the room
         const updatePlayersMsg = JSON.stringify({ type: 'updatePlayers', players: players });
-        const roomStatusMsg = JSON.stringify({ type: 'roomStatus', ...roomStatus });
+        broadcastToRoom(roomPin, updatePlayersMsg);
 
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(updatePlayersMsg);
-            client.send(roomStatusMsg);
-          }
-        });
+        // Send room status update only to the new client
+        const roomStatusMsg = JSON.stringify({ type: 'roomStatus', ...roomStatus });
+        ws.send(roomStatusMsg);
       } catch (err) {
         console.error('Error handling join room request:', err);
       }
     }
-
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
   });
 
   ws.on('close', async () => {
@@ -75,38 +69,55 @@ wss.on('connection', (ws) => {
     const clientInfo = clients.get(ws);
     if (clientInfo) {
       const { roomPin, playerName } = clientInfo;
+      const playerStatus = playerStatuses.get(playerName);
 
-      try {
-        await removePlayerFromDatabase(playerName, roomPin);
+      if (playerStatus) {
+        // Update last seen time for the player
+        playerStatus.lastSeen = Date.now();
 
-        clients.delete(ws);
+        // Set a timeout to check if the player reconnects
+        setTimeout(async () => {
+          if (Date.now() - playerStatus.lastSeen >= 5000) { // 5 seconds timeout
+            try {
+              // The player has not reconnected; treat as a leave
+              clients.delete(ws);
+              playerStatuses.delete(playerName);
+              await removePlayerFromDatabase(playerName, roomPin);
 
-        const players = await getPlayers(roomPin);
-        const updateMsg = JSON.stringify({ type: 'updatePlayers', players: players });
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(updateMsg);
+              // Get updated player list
+              const players = await getPlayers(roomPin);
+
+              // Broadcast updated player list to all clients in the room
+              const updateMsg = JSON.stringify({ type: 'leftPlayers', players: players });
+              broadcastToRoom(roomPin, updateMsg);
+            } catch (err) {
+              console.error('Error removing player from database:', err);
+            }
           }
-        });
-      } catch (err) {
-        console.error('Error removing player from database:', err);
+        }, 5000);
       }
     }
   });
 });
 
+// Broadcast message to all clients in the specified room
+function broadcastToRoom(roomPin, message) {
+  clients.forEach((clientInfo, clientWs) => {
+    if (clientInfo.roomPin === roomPin && clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(message);
+    }
+  });
+}
+
 // Periodically broadcast room status updates
 function broadcastRoomStatus(roomPin) {
   getRoomStatus(roomPin).then(roomStatus => {
     const roomStatusMsg = JSON.stringify({ type: 'roomStatus', ...roomStatus });
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(roomStatusMsg);
-      }
-    });
+    broadcastToRoom(roomPin, roomStatusMsg);
   }).catch(err => console.error('Error broadcasting room status:', err));
 }
 
+// Periodic status updates (optional)
 setInterval(() => {
   clients.forEach((client, ws) => {
     broadcastRoomStatus(client.roomPin);
@@ -151,6 +162,49 @@ app.get('/', (req, res) => {
   res.type('text/plain');
   res.send('WebSocket is Running');
 });
+
+let endTimeCache = {}; // In-memory cache for end times
+
+app.get('/get-time', (req, res) => {
+  const questionId = req.query.questionId; // Get question ID from query parameter
+
+  if (endTimeCache[questionId]) {
+    res.json({ endTime: endTimeCache[questionId] });
+  } else {
+    getEndTimeFromDatabase(questionId)
+      .then(endTime => {
+        if (endTime) {
+          endTimeCache[questionId] = endTime;
+          res.json({ endTime });
+        } else {
+          res.status(404).json({ error: 'Question not found' });
+        }
+      })
+      .catch(error => {
+        console.error('Database query failed:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      });
+  }
+});
+
+// Helper function to calculate and store end time
+function getEndTimeFromDatabase(questionId) {
+  return new Promise((resolve, reject) => {
+    const query = 'SELECT time FROM questions WHERE id = ?';
+    db.query(query, [questionId], (error, results) => {
+      if (error) {
+        return reject(error);
+      }
+      if (results.length > 0) {
+        const timeInSeconds = results[0].time; // Time in seconds
+        const endTime = Date.now() + timeInSeconds * 1000; // Calculate end time
+        resolve(endTime);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
 
 // Helper functions
 async function getPlayers(roomPin) {

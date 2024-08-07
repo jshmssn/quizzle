@@ -52,20 +52,20 @@
                 max-width: 120px;
             }
         }
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body>
+<script type="text/javascript"> 
+    function disableRightClick() 
+    {  
+        return false; 
+    } 
+</script>
+<body oncontextmenu="return disableRightClick()">
     <div class="container mt-5">
-        <?php if ($this->session->flashdata('status')): ?>
-            <script>
-                iziToast[<?php echo $this->session->flashdata('status'); ?>]({
-                    title: '<?php echo htmlspecialchars($this->session->flashdata('status') === 'success' ? 'Success' : 'Error', ENT_QUOTES, 'UTF-8'); ?>',
-                    message: '<?php echo htmlspecialchars($this->session->flashdata('msg'), ENT_QUOTES, 'UTF-8'); ?>',
-                    position: 'topRight'
-                });
-            </script>
-        <?php endif; ?>
-
         <?php if ($this->session->userdata('room_pin')): ?>
             <h3 class="mb-4 text-center">Room PIN</h3>
             <div class="form-group">
@@ -74,7 +74,7 @@
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
-                <form action="<?php echo site_url('main_controller/quiz_host'); ?>" method="post">
+                <form action="<?php echo site_url('main_controller/start_game_host'); ?>" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">
@@ -83,7 +83,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
+                    <button type="submit" id="start-button" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
                     <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel Room</a>
                 </form>
             </div>
@@ -95,104 +95,111 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-    // Define a flag to control logging
-    const SHOW_LOGS = false; // Set to `true` to enable logging
+        // Define a flag to control logging
+        const SHOW_LOGS = false; // Set to `true` to enable logging
 
-    // Custom logging function
-    function customLog(message) {
-        if (SHOW_LOGS) {
-            console.log(message);
-        }
-    }
-
-    // Get the room pin and player name
-    const roomPin = document.getElementById('room-pin').value;
-    const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
-
-    // WebSocket URL, adjust as necessary
-    const socketUrl = `ws://${window.location.hostname}:3000`;
-    const socket = new WebSocket(socketUrl);
-
-    let isSocketOpen = false;
-
-    // Handle WebSocket open event
-    socket.onopen = function() {
-        console.log('WebSocket connection established.');
-        isSocketOpen = true;
-        sendJoinRoomRequest();
-    };
-
-    // Handle WebSocket message event
-    socket.onmessage = function(event) {
-        console.log('Received WebSocket message:', event.data);
-        try {
-            const message = JSON.parse(event.data);
-
-            if (message.type === 'updatePlayers') {
-                updatePlayers(message.players);
-                iziToast.success({
-                    title: 'Player Joined',
-                    message: 'A new player has joined the room.',
-                    position: 'topRight'
-                });
-            } else if (message.type === 'roomStatus') {
-                handleRoomStatus(message);
+        // Custom logging function
+        function customLog(message) {
+            if (SHOW_LOGS) {
+                console.log(message);
             }
-        } catch (e) {
-            console.error('Error processing WebSocket message:', e);
         }
-    };
 
-    // Handle WebSocket close event
-    socket.onclose = function() {
-        console.log('WebSocket connection closed.');
-        isSocketOpen = false;
-    };
+        // Get the room pin and player name
+        const roomPin = document.getElementById('room-pin').value;
+        const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
 
-    // Handle WebSocket error event
-    socket.onerror = function(error) {
-        console.error('WebSocket error:', error);
-    };
+        // WebSocket URL, adjust as necessary
+        const socketUrl = `ws://${window.location.hostname}:3000`;
+        const socket = new WebSocket(socketUrl);
 
-    // Send request to join room
-    function sendJoinRoomRequest() {
-        if (isSocketOpen) {
-            const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName });
-            socket.send(joinMessage);
-        } else {
-            console.log('WebSocket is not open. Cannot send message.');
+        let isSocketOpen = false;
+
+        // Handle WebSocket open event
+        socket.onopen = function() {
+            console.log('WebSocket connection established.');
+            isSocketOpen = true;
+            sendJoinRoomRequest();
+        };
+
+        // Handle WebSocket message event
+        socket.onmessage = function(event) {
+            console.log('Received WebSocket message:', event.data);
+            try {
+                const message = JSON.parse(event.data);
+
+                if (message.type === 'updatePlayers') {
+                    updatePlayers(message.players);
+                    iziToast.success({
+                        title: 'Notice',
+                        message: 'A player has joined the room.',
+                        position: 'topRight'
+                    });
+                } else if (message.type === 'leftPlayers') {
+                    updatePlayers(message.players);
+                    iziToast.error({
+                        title: 'Notice',
+                        message: 'A player has left the room.',
+                        position: 'topRight'
+                    });
+                } else if (message.type === 'roomStatus') {
+                    handleRoomStatus(message);
+                }
+            } catch (e) {
+                console.error('Error processing WebSocket message:', e);
+            }
+        };
+
+        // Handle WebSocket close event
+        socket.onclose = function() {
+            console.log('WebSocket connection closed.');
+            isSocketOpen = false;
+        };
+
+        // Handle WebSocket error event
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+
+        // Send request to join room
+        function sendJoinRoomRequest() {
+            if (isSocketOpen) {
+                const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName });
+                socket.send(joinMessage);
+            }
         }
-    }
 
-    // Update player list
-    function updatePlayers(players) {
-        $('#players-container').empty();
-        if (players && players.length > 0) {
-            players.forEach(function(player) {
-                const displayName = player.name; // Removed (You) label
-                $('#players-container').append('<div class="player-card">' + $('<div>').text(displayName).html() + '</div>');
-            });
-        } else {
-            $('#players-container').append('<div class="player-card">No participants yet.</div>');
+        // Update player list and button state
+        function updatePlayers(players) {
+            $('#players-container').empty();
+            if (players && players.length > 0) {
+                players.forEach(function(player) {
+                    const displayName = player.name; // Removed (You) label
+                    $('#players-container').append('<div class="player-card">' + $('<div>').text(displayName).html() + '</div>');
+                });
+                $('#start-button').removeClass('disabled'); // Enable the button
+            } else {
+                $('#players-container').append('<div class="player-card">No participants yet.</div>');
+                $('#start-button').addClass('disabled'); // Disable the button
+            }
         }
-    }
 
-    // Handle room status updates
-    function handleRoomStatus(message) {
-        if (message.hasStarted === 1) {
-            window.location.href = "/game_controller/start_game";
-        } else if (message.isValid === 0) {
-            console.warn("Room is not available. Redirecting...");
-            window.location.href = "<?php echo site_url('main_controller/index'); ?>";
+        // Handle room status updates
+        function handleRoomStatus(message) {
+            if (message.hasStarted === 1) {
+                window.location.href = "<?php echo site_url('main_controller/index'); ?>";
+            } else if (message.isValid === 0) {
+                console.warn("Room is not available. Redirecting...");
+                window.location.href = "<?php echo site_url('main_controller/index'); ?>";
+            }
         }
-    }
 
-    // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
-    setInterval(function() {
-        if (!isSocketOpen) {
-            console.error('WebSocket is not open. Polling might be needed.');
-        }
-    }, 500);
+        // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
+        setInterval(function() {
+            if (!isSocketOpen) {
+                console.error('WebSocket is not open. Polling might be needed.');
+            }
+        }, 500);
     </script>
 </body>
 </html>

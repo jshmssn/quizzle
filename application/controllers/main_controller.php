@@ -9,7 +9,64 @@ class main_controller extends CI_Controller {
         $this->load->library("session");
     }
 
+    public function get_time($id) {
+        // Initialize cURL session
+        $ch = curl_init();
+        
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_URL, "http://localhost:3000/api/get-time/" . $id);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        
+        // Execute cURL request
+        $response = curl_exec($ch);
+        
+        // Close cURL session
+        curl_close($ch);
+
+        // Decode JSON response
+        $data = json_decode($response, true);
+        
+        // Extract time from response
+        $time = isset($data['time']) ? $data['time'] : 0;
+
+        // Pass time to the view
+        $this->load->view('quiz_view_host', ['time' => $time]);
+    }
+
+    public function get_time_player($id) {
+        // Initialize cURL session
+        $ch = curl_init();
+    
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_URL, "http://localhost:3000/get-time?questionId=" . $id);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    
+        // Execute cURL request
+        $response = curl_exec($ch);
+    
+        // Check for cURL errors
+        if (curl_errno($ch)) {
+            echo 'cURL Error: ' . curl_error($ch);
+            curl_close($ch);
+            return;
+        }
+    
+        // Close cURL session
+        curl_close($ch);
+    
+        // Decode JSON response
+        $data = json_decode($response, true);
+    
+        // Extract time from response
+        $time = isset($data['endTime']) ? $data['endTime'] : 0;
+    
+        // Pass time to the view
+        $this->load->view('quiz_view', ['time' => $time]);
+    }    
+
     public function index() {
+        $items = array('player_name', 'room_pin');
+        $this->session->unset_userdata($items);
         $this->load->view('welcome');
     }
 
@@ -22,6 +79,9 @@ class main_controller extends CI_Controller {
     }
 
     public function submit() {
+        $items = array('player_name', 'room_pin');
+        $this->session->unset_userdata($items);
+
         $questions = $this->input->post('questions');
         
         if (!empty($questions)) {
@@ -107,7 +167,7 @@ class main_controller extends CI_Controller {
             
             // Redirect to the room
             $this->session->set_flashdata("status", "success");
-            $this->session->set_flashdata("msg", $unique_name + " has joined.");
+            $this->session->set_flashdata("msg", "A player has joined.");
             redirect('main_controller/room');
         } else {
             // Set an error message in flashdata
@@ -142,7 +202,8 @@ class main_controller extends CI_Controller {
             $this->quiz_model->delete_room_questions($roomPin);
     
             // Unset the roomPin session data
-            $this->session->unset_userdata('room_pin');
+            $items = array('player_name', 'room_pin');
+            $this->session->unset_userdata($items);
     
             // Set a flash message for success
             $this->session->set_flashdata('status', 'success');
@@ -208,6 +269,113 @@ class main_controller extends CI_Controller {
     
         // Return the response in JSON format
         echo json_encode($response);
+    }
+
+    public function start_game() {
+        // Load the quiz model
+        $this->load->model('quiz_model');
+        
+        // Get a random question
+        $question = $this->quiz_model->get_question();
+        
+        if (!$question) {
+            // Handle case where no question is found
+            show_error('No questions found.');
+            return;
+        }
+        
+        $question_text = $question['question_text'];
+        $question_id = $question['id'];
+        $question_time = $question['time']; // Fetch the question's time
+    
+        // Get answers for the question
+        $answers = $this->quiz_model->get_answers($question_id);
+        
+        if (!$answers) {
+            // Handle case where no answers are found for the question
+            show_error('No answers found for the question.');
+            return;
+        }
+        
+        // Shuffle the answers array to randomize the order
+        shuffle($answers);
+        
+        // Get all players and their scores
+        $players = $this->quiz_model->get_players();
+        
+        // Find the correct answer
+        $correct_answer = null;
+        foreach ($answers as $answer) {
+            if (isset($answer['is_correct']) && $answer['is_correct']) {
+                $correct_answer = $answer['answer_text'];
+                break;
+            }
+        }
+        
+        // Prepare data for the view
+        $data = [
+            'question' => $question_text,
+            'time' => $question_time, // Include the question's time
+            'answers' => $answers, // Pass the shuffled answers
+            'correct_answer' => $correct_answer, // Include the correct answer in the data
+            'players' => $players
+        ];
+        
+        // Load the view with data
+        $this->load->view('player/quiz_view', $data);
+    }
+    
+    public function start_game_host() {
+        // Get a random question
+        $question = $this->quiz_model->get_question();
+        $question_text = $question['question_text'];
+        $question_id = $question['id'];
+    
+        // Get answers for the question
+        $answers = $this->quiz_model->get_answers($question_id);
+    
+        // Get all players and their scores
+        $players = $this->quiz_model->get_players();
+    
+        // Find the correct answer
+        $correct_answer = null;
+        foreach ($answers as $answer) {
+            if ($answer['is_correct']) {
+                $correct_answer = $answer['answer_text'];
+                break;
+            }
+        }
+    
+        // Prepare data for the view
+        $data['question'] = $question_text;
+        $data['answers'] = array_map(function($answer) {
+            return $answer['answer_text'];
+        }, $answers);
+        $data['correct_answer'] = $correct_answer; // Include the correct answer in the data
+        $data['players'] = $players;
+    
+        // Example: Fetch the room PIN from the session or input
+        $roomPin = $this->session->userdata('room_pin'); // Ensure this matches how you're storing the room PIN
+    
+        if ($roomPin) {
+            // Update the hasStarted field to 1 where the pin matches
+            $this->db->where('pin', $roomPin);
+            $this->db->set('hasStarted', 1);
+            $updateSuccess = $this->db->update('rooms');
+    
+            if (!$updateSuccess) {
+                // Handle the error if the update failed
+                $this->session->set_flashdata('status', 'error');
+                $this->session->set_flashdata('msg', 'Failed to update room status.');
+            }
+        } else {
+            // Handle the case where roomPin is not set or is invalid
+            $this->session->set_flashdata('status', 'error');
+            $this->session->set_flashdata('msg', 'Room PIN is not set.');
+        }
+    
+        // Load the view with data
+        $this->load->view('host/quiz_view_host', $data);
     }
 }
 

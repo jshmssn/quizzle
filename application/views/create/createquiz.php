@@ -64,7 +64,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 		}
 	</style>
 </head>
-<body>
+<script type="text/javascript"> 
+    function disableRightClick() 
+    {  
+        return false; 
+    } 
+</script>
+<body oncontextmenu="return disableRightClick()">
 	<div id="container">
 		<div id="body">
 			<h1 class="mb-4">Choose a game below or <a href="<?php echo site_url('main_controller/creator'); ?>">Create your own.</a></h1>
