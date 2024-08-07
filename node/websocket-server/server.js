@@ -43,8 +43,23 @@ wss.on('connection', (ws) => {
       const roomPin = msg.pin;
       const playerName = msg.playerName;
 
-      clients.set(ws, { roomPin, playerName });
-      playerStatuses.set(playerName, { ws, roomPin, lastSeen: Date.now() });
+      // Check if the player is reconnecting
+      if (playerStatuses.has(playerName)) {
+        const playerStatus = playerStatuses.get(playerName);
+        if (Date.now() - playerStatus.lastSeen < 5000) { // Reconnect within 5 seconds
+          clients.set(ws, { roomPin, playerName });
+          playerStatuses.set(playerName, { ws, roomPin, lastSeen: Date.now() });
+
+          // Update the player's status in the database
+          await updatePlayerStatusInDatabase(playerName, roomPin, 1);
+        }
+      } else {
+        clients.set(ws, { roomPin, playerName });
+        playerStatuses.set(playerName, { ws, roomPin, lastSeen: Date.now() });
+
+        // Update the player's status in the database
+        await updatePlayerStatusInDatabase(playerName, roomPin, 1);
+      }
 
       try {
         const players = await getPlayers(roomPin);
@@ -79,10 +94,10 @@ wss.on('connection', (ws) => {
         setTimeout(async () => {
           if (Date.now() - playerStatus.lastSeen >= 5000) { // 5 seconds timeout
             try {
-              // The player has not reconnected; treat as a leave
+              // The player has not reconnected; update the status
               clients.delete(ws);
               playerStatuses.delete(playerName);
-              await removePlayerFromDatabase(playerName, roomPin);
+              await updatePlayerStatusInDatabase(playerName, roomPin, 0);
 
               // Get updated player list
               const players = await getPlayers(roomPin);
@@ -91,7 +106,7 @@ wss.on('connection', (ws) => {
               const updateMsg = JSON.stringify({ type: 'leftPlayers', players: players });
               broadcastToRoom(roomPin, updateMsg);
             } catch (err) {
-              console.error('Error removing player from database:', err);
+              console.error('Error updating player status in database:', err);
             }
           }
         }, 5000);
@@ -231,12 +246,12 @@ async function getRoomStatus(roomPin) {
   });
 }
 
-async function removePlayerFromDatabase(playerName, roomPin) {
+async function updatePlayerStatusInDatabase(playerName, roomPin, status) {
   return new Promise((resolve, reject) => {
-    const deleteQuery = 'DELETE FROM participants WHERE name = ? AND room_pin = ?';
-    db.query(deleteQuery, [playerName, roomPin], (err, results) => {
+    const updateQuery = 'UPDATE participants SET isValid = ? WHERE name = ? AND room_pin = ?';
+    db.query(updateQuery, [status, playerName, roomPin], (err, results) => {
       if (err) return reject(err);
-      console.log(`Removed player ${playerName} from room ${roomPin}`);
+      console.log(`Updated status for player ${playerName} in room ${roomPin} to ${status}`);
       resolve(results);
     });
   });
