@@ -115,6 +115,7 @@
         <div class="content">
             <div class="question">
                 <h2><?= htmlspecialchars($question, ENT_QUOTES, 'UTF-8') ?></h2>
+                <input type="hidden" id="questionId" value="<?= htmlspecialchars($question_id, ENT_QUOTES, 'UTF-8') ?>">
             </div>
             <div class="timer" id="timer">Time left: 00</div>
             <div class="answers">
@@ -133,7 +134,7 @@
             const timerElement = document.getElementById('timer');
             const waitingMessage = document.getElementById('waitingMessage');
             const correctAnswer = document.getElementById('correctAnswer');
-            let questionId = 33; // Replace with the actual question ID or set dynamically
+            const questionId = document.getElementById('questionId').value;
 
             // Fetch the timer and question details
             async function fetchQuestionDetails() {

@@ -7,11 +7,12 @@ class quiz_model extends CI_Model {
         $this->load->database();
     }
 
-    public function save_question($questionText, $answers, $correctAnswerIndex, $roomPin) {
+    public function save_question($questionText, $answers, $correctAnswerIndex, $roomPin, $time) {
         // Insert the question
         $data = array(
             'question_text' => $questionText,
-            'room_pin' => $roomPin // Add room_pin to the question data
+            'room_pin' => $roomPin,
+            'time' => $time // Add time to the data array
         );
         $this->db->insert('questions', $data);
     

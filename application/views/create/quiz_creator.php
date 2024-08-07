@@ -75,6 +75,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <label for="question-1" class="form-label">Question 1</label>
                             <input type="text" id="question-1" name="questions[1][text]" class="form-control question" placeholder="Enter question" required>
                         </div>
+                        <div class="mb-3">
+                            <label for="time-1" class="form-label">Time (in seconds)</label>
+                            <input type="number" id="time-1" name="questions[1][time]" class="form-control" placeholder="Enter time" required>
+                        </div>
                         <div class="answer-container">
                             <div class="mb-3">
                                 <label class="form-label">Answer 1</label>
@@ -143,6 +147,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="mb-3">
                     <label for="question-${quizIndex}" class="form-label">Question ${quizIndex}</label>
                     <input type="text" id="question-${quizIndex}" name="questions[${quizIndex}][text]" class="form-control question" placeholder="Enter question" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time-${quizIndex}" class="form-label">Time (in seconds)</label>
+                    <input type="number" id="time-${quizIndex}" name="questions[${quizIndex}][time]" class="form-control" placeholder="Enter time" required>
                 </div>
                 <div class="answer-container">
                     <div class="mb-3">

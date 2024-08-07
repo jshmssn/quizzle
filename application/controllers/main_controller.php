@@ -81,7 +81,7 @@ class main_controller extends CI_Controller {
     public function submit() {
         $items = array('player_name', 'room_pin');
         $this->session->unset_userdata($items);
-
+    
         $questions = $this->input->post('questions');
         
         if (!empty($questions)) {
@@ -96,8 +96,9 @@ class main_controller extends CI_Controller {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
-                
-                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $pin)) {
+                $time = (int) $question['time']; // New line to get the time value
+    
+                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $pin, $time)) {
                     $success = false;
                     break;
                 }
@@ -126,7 +127,7 @@ class main_controller extends CI_Controller {
         }
     
         redirect('main_controller/hostgame');
-    }    
+    }
     
     public function hostgame() {
         $roomPin = $this->session->userdata('room_pin');
@@ -315,6 +316,7 @@ class main_controller extends CI_Controller {
         // Prepare data for the view
         $data = [
             'question' => $question_text,
+            'question_id' => $question_id,
             'time' => $question_time, // Include the question's time
             'answers' => $answers, // Pass the shuffled answers
             'correct_answer' => $correct_answer, // Include the correct answer in the data
@@ -348,6 +350,7 @@ class main_controller extends CI_Controller {
     
         // Prepare data for the view
         $data['question'] = $question_text;
+        $data['question_id'] = $question_id; // Include the question ID
         $data['answers'] = array_map(function($answer) {
             return $answer['answer_text'];
         }, $answers);
@@ -377,6 +380,7 @@ class main_controller extends CI_Controller {
         // Load the view with data
         $this->load->view('host/quiz_view_host', $data);
     }
+    
 }
 
 ?>
