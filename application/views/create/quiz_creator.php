@@ -30,7 +30,7 @@
             background-repeat: repeat;
             background-size: 50%;
             background-position: center;
-            opacity: 0.1; /* Adjust the opacity as needed */
+            opacity: 0.08; /* Adjust the opacity as needed */
             transform: rotate(-30deg); /* Tilt the image */
             pointer-events: none; /* Ensure it doesn't interfere with clicks */
         }
@@ -222,7 +222,6 @@
             `;
 
             quizContainer.appendChild(newQuizSet);
-            randomizeAnswers();
         });
 
         // Remove button functionality
@@ -235,25 +234,6 @@
             }
         });
 
-        // Randomize Answer Slots
-        function randomizeAnswers() {
-            document.querySelectorAll('.quiz-set').forEach((quizSet) => {
-                const radios = quizSet.querySelectorAll('input[type="radio"]');
-                const answers = Array.from(radios).map(radio => radio.parentElement);
-                const originalCorrectIndex = quizSet.querySelector('input[type="radio"][checked]').value; // Get the original correct answer index
-                
-                // Shuffle answers
-                const randomizedAnswers = answers.sort(() => Math.random() - 0.5);
-                
-                // Update radio values and determine new correct answer index
-                randomizedAnswers.forEach((answer, index) => {
-                    answer.querySelector('input[type="radio"]').value = index;
-                    if (answer.querySelector('input[type="radio"]').checked) {
-                        quizSet.querySelector('input[name$="[correct]"]').value = index;
-                    }
-                });
-            });
-        }
 
         // Scroll to Top Button Functionality
         const scrollToTopButton = document.getElementById('scroll-to-top');
@@ -287,9 +267,6 @@
                 document.getElementById('quiz-form').submit(); // Submit the form when confirmed
             });
         });
-
-        // Initialize randomization on page load
-        window.addEventListener('load', randomizeAnswers);
     </script>
 </body>
 </html>

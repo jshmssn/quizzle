@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
-        body{
+        body {
             background-color: #cfcfcf;
         }
         .centered-container {
@@ -98,7 +98,7 @@
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
-                <form action="<?php echo site_url('/start_game_host'); ?>" method="post">
+                <form id="form-start" action="<?php echo site_url('main_controller/start'); ?>" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">
@@ -107,7 +107,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="start-button" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
+                    <button type="button" id="start-button" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
                     <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel Room</a>
                 </form>
             </div>
@@ -131,7 +131,7 @@
 
         // Get the room pin and player name
         const roomPin = document.getElementById('room-pin').value;
-        const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
+        const playerName = "";
 
         // WebSocket URL, adjust as necessary
         const socketUrl = `ws://${window.location.hostname}:3000`;
@@ -198,7 +198,7 @@
             $('#players-container').empty();
             if (players && players.length > 0) {
                 players.forEach(function(player) {
-                    const displayName = player.name; // Removed (You) label
+                    const displayName = player.name;
                     $('#players-container').append('<div class="player-card">' + $('<div>').text(displayName).html() + '</div>');
                 });
                 $('#start-button').removeClass('disabled'); // Enable the button
@@ -210,13 +210,37 @@
 
         // Handle room status updates
         function handleRoomStatus(message) {
-            if (message.hasStarted === 1) {
-                window.location.href = "<?php echo site_url('main_controller/index'); ?>";
+            if (message.hasStarted === 1 && message.isValid === 0) {
+                window.location.href = "<?php echo site_url('/start_game_host'); ?>";
             } else if (message.isValid === 0) {
                 console.warn("Room is not available. Redirecting...");
                 window.location.href = "<?php echo site_url('main_controller/index'); ?>";
             }
         }
+
+        $('#start-button').on('click', function(e) {
+        e.preventDefault();
+
+        const actionUrl = $('#form-start').attr('action');
+        const roomPin = $('#room-pin').val();
+
+        $.ajax({
+            url: actionUrl,
+            type: 'POST',
+            data: { room_pin: roomPin },
+            success: function(response) {
+                // Handle the response
+            },
+            error: function(xhr, status, error) {
+                console.error('Error starting game:', error);
+                iziToast.error({
+                    title: 'Error',
+                    message: 'Failed to start the game. Please try again.',
+                    position: 'topRight'
+                });
+            }
+        });
+    });
 
         // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
         setInterval(function() {

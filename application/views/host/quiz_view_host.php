@@ -92,6 +92,28 @@
             color: #2e7d32;
             display: none;
         }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        .overlay.hidden {
+            display: none;
+        }
+        .countdown {
+            font-size: 48px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <script type="text/javascript"> 
@@ -112,6 +134,10 @@
     });
 </script>
 <body>
+    <div class="overlay" id="overlay">
+        <div>Starting in:</div>
+        <div id="countdown" class="countdown">10</div>
+    </div>
     <div class="container">
         <div class="player-list">
             <h3>Player List - Scores</h3>
@@ -143,10 +169,24 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('overlay');
+            const countdownElement = document.getElementById('countdown');
             const timerElement = document.getElementById('timer');
             const waitingMessage = document.getElementById('waitingMessage');
             const correctAnswer = document.getElementById('correctAnswer');
             const questionId = document.getElementById('questionId').value;
+
+            // Start countdown from 10 seconds
+            let countdown = 10;
+            const countdownInterval = setInterval(() => {
+                countdownElement.textContent = countdown;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    overlay.classList.add('hidden');
+                    fetchQuestionDetails();
+                }
+            }, 1000);
 
             // Fetch the timer and question details
             async function fetchQuestionDetails() {
@@ -191,9 +231,6 @@
             function displayCorrectAnswer() {
                 correctAnswer.style.display = 'block';
             }
-
-            // Fetch and start the timer when the page loads
-            fetchQuestionDetails();
         });
     </script>
 </body>

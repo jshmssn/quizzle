@@ -326,6 +326,29 @@ class main_controller extends CI_Controller {
         // Load the view with data
         $this->load->view('player/quiz_view', $data);
     }
+
+    public function start(){
+        // Example: Fetch the room PIN from the input
+        $roomPin = $this->input->post('room_pin');
+    
+        if ($roomPin) {
+            // Update the hasStarted field to 1 where the pin matches
+            $this->db->where('pin', $roomPin);
+            $this->db->set('hasStarted', 1);
+            $this->db->set('isValid', 0);
+            $updateSuccess = $this->db->update('rooms');
+    
+            if (!$updateSuccess) {
+                // Handle the error if the update failed
+                $this->session->set_flashdata('status', 'error');
+                $this->session->set_flashdata('msg', 'Failed to update room status.');
+            }
+        } else {
+            // Handle the case where roomPin is not set or is invalid
+            $this->session->set_flashdata('status', 'error');
+            $this->session->set_flashdata('msg', 'Room PIN is not set.');
+        }
+    }
     
     public function start_game_host() {
         // Get a random question
@@ -356,27 +379,6 @@ class main_controller extends CI_Controller {
         }, $answers);
         $data['correct_answer'] = $correct_answer; // Include the correct answer in the data
         $data['players'] = $players;
-    
-        // Example: Fetch the room PIN from the session or input
-        $roomPin = $this->session->userdata('room_pin'); // Ensure this matches how you're storing the room PIN
-    
-        if ($roomPin) {
-            // Update the hasStarted field to 1 where the pin matches
-            $this->db->where('pin', $roomPin);
-            $this->db->set('hasStarted', 1);
-            $this->db->set('isValid', 0);
-            $updateSuccess = $this->db->update('rooms');
-    
-            if (!$updateSuccess) {
-                // Handle the error if the update failed
-                $this->session->set_flashdata('status', 'error');
-                $this->session->set_flashdata('msg', 'Failed to update room status.');
-            }
-        } else {
-            // Handle the case where roomPin is not set or is invalid
-            $this->session->set_flashdata('status', 'error');
-            $this->session->set_flashdata('msg', 'Room PIN is not set.');
-        }
     
         // Load the view with data
         $this->load->view('host/quiz_view_host', $data);

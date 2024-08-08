@@ -140,25 +140,6 @@ setInterval(() => {
 }, 2000);
 
 // API routes
-app.get('/api/get_room_status', (req, res) => {
-  console.log('GET /api/get_room_status hit');
-  const roomPin = req.query.pin;
-
-  if (!roomPin) {
-    return res.json({ isValid: 0, hasStarted: 0 });
-  }
-
-  const query = 'SELECT isValid, hasStarted FROM rooms WHERE pin = ?';
-  db.query(query, [roomPin], (err, results) => {
-    if (err) throw err;
-    if (results.length > 0) {
-      res.json(results[0]);
-    } else {
-      res.json({ isValid: 0, hasStarted: 0 });
-    }
-  });
-});
-
 app.get('/api/get_players', (req, res) => {
   console.log('GET /api/get_players hit');
   const roomPin = req.query.room_pin;

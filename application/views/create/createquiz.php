@@ -55,7 +55,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 			100% { background-position: 0% 0%; }
 		}
 
-		button {
+		#button {
 			padding: 15px 30px;
 			font-size: 16px;
 			margin: 10px;
@@ -67,7 +67,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 			transition: background-color 0.3s;
 		}
 
-		button:hover {
+		#button:hover {
 			background-color: #0056b3;
 		}
 	</style>
@@ -94,9 +94,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 		<img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid" alt="Logo">
 		<div id="body">
 			<h1 class="mb-4">Choose a game below or <a href="<?php echo site_url('/quiz_creator'); ?>">Create your own.</a></h1>
-			<button>Math Quiz</button>
+			<a id="button" href="#" class="btn btn-primary">Math Quiz</a>
 			<h4>OR</h4>
-			<button>Game Trivia</button><br>
+			<a id="button" href="#" class="btn btn-primary">Trivia</a>
+			<br>
 			<a href="<?php echo site_url('/'); ?>">Join a room?</a>
 		</div>
 	</div>
