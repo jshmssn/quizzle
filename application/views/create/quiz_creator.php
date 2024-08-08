@@ -137,11 +137,11 @@
     <button id="scroll-to-top" class="scroll-to-top">↑</button>
 
     <!-- Confirmation Modal -->
-    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal fade" id="submitModal" tabindex="-1" aria-labelledby="submitModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="confirmModalLabel">Confirm Submission</h5>
+                    <h5 class="modal-title" id="submitModalLabel">Confirm Submission</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -149,7 +149,26 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="confirm-submit" class="btn btn-primary">Submit</button>
+                    <button type="button" id="confirm-submit" class="btn btn-primary">Yes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancellation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalLabel">Confirm Cancellation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to cancel your creation? It will clear all the progress.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                    <a href="<?php echo site_url('/create'); ?>" id="confirm-home" class="btn btn-danger">Yes, cancel and return to quiz selection</a>
                 </div>
             </div>
         </div>
@@ -221,10 +240,17 @@
             document.querySelectorAll('.quiz-set').forEach((quizSet) => {
                 const radios = quizSet.querySelectorAll('input[type="radio"]');
                 const answers = Array.from(radios).map(radio => radio.parentElement);
+                const originalCorrectIndex = quizSet.querySelector('input[type="radio"][checked]').value; // Get the original correct answer index
+                
+                // Shuffle answers
                 const randomizedAnswers = answers.sort(() => Math.random() - 0.5);
                 
+                // Update radio values and determine new correct answer index
                 randomizedAnswers.forEach((answer, index) => {
                     answer.querySelector('input[type="radio"]').value = index;
+                    if (answer.querySelector('input[type="radio"]').checked) {
+                        quizSet.querySelector('input[name$="[correct]"]').value = index;
+                    }
                 });
             });
         }
@@ -254,7 +280,7 @@
         // Handle Form Submission
         document.getElementById('quiz-form').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent default form submission
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const confirmModal = new bootstrap.Modal(document.getElementById('submitModal'));
             confirmModal.show();
 
             document.getElementById('confirm-submit').addEventListener('click', function() {

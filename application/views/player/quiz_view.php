@@ -91,6 +91,29 @@
             background-color: #e0f7fa;
             font-weight: bold;
         }
+        /* Overlay and timer styles */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        .overlay.hidden {
+            display: none;
+        }
+        .countdown {
+            font-size: 48px;
+            margin-top: 20px;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -105,14 +128,18 @@
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
             (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
-            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
-            (e.keyCode == 123)) {                          // Prevent F12
+            (e.ctrlKey && e.ctrlKey && e.keyCode == 85) || // Prevent Ctrl+U
+            (e.keyCode == 123)) { // Prevent F12
             e.preventDefault();
             return false;
         }
     });
 </script>
 <body>
+    <div class="overlay" id="overlay">
+        <div id="countdown" class="countdown">10</div>
+        <div>Preparing...</div>
+    </div>
     <div class="container">
         <div class="player-list">
             <h3>Player List - Scores</h3>
@@ -145,10 +172,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('overlay');
+            const countdownElement = document.getElementById('countdown');
             const timerElement = document.getElementById('timer');
             const waitingMessage = document.getElementById('waitingMessage');
             const correctAnswer = document.getElementById('correctAnswer');
             const questionId = document.getElementById('questionId').value;
+
+            // Start countdown from 10 seconds
+            let countdown = 10;
+            const countdownInterval = setInterval(() => {
+                countdownElement.textContent = countdown;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    overlay.classList.add('hidden');
+                    fetchQuestionDetails();
+                }
+            }, 1000);
 
             // Fetch the timer and question details
             async function fetchQuestionDetails() {
@@ -210,9 +251,6 @@
                     });
                 });
             }
-
-            // Fetch and start the timer when the page loads
-            fetchQuestionDetails();
 
             // Initialize answer selection handling
             handleAnswerSelection();

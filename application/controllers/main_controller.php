@@ -364,6 +364,7 @@ class main_controller extends CI_Controller {
             // Update the hasStarted field to 1 where the pin matches
             $this->db->where('pin', $roomPin);
             $this->db->set('hasStarted', 1);
+            $this->db->set('isValid', 0);
             $updateSuccess = $this->db->update('rooms');
     
             if (!$updateSuccess) {

@@ -204,7 +204,7 @@
 
         // Handle room status updates
         function handleRoomStatus(message) {
-            if (message.hasStarted === 1) {
+            if (message.hasStarted === 1 && message.isValid === 0) {
                 window.location.href = "<?php echo site_url('/start_game'); ?>";
             } else if (message.isValid === 0 && !alertShown) {
                 Swal.fire({
