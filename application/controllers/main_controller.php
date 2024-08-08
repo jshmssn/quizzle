@@ -126,7 +126,7 @@ class main_controller extends CI_Controller {
             $this->session->set_flashdata('msg', 'No quiz questions provided.');
         }
     
-        redirect('main_controller/hostgame');
+        redirect('/hostgame');
     }
     
     public function hostgame() {
@@ -169,7 +169,7 @@ class main_controller extends CI_Controller {
             // Redirect to the room
             $this->session->set_flashdata("status", "success");
             $this->session->set_flashdata("msg", "A player has joined.");
-            redirect('main_controller/room');
+            redirect('/room');
         } else {
             // Set an error message in flashdata
             $this->session->set_flashdata("status", "error");
@@ -216,7 +216,7 @@ class main_controller extends CI_Controller {
         }
     
         // Redirect to the index page
-        redirect('main_controller');
+        redirect('welcome');
     }
     
     public function leftroom() {

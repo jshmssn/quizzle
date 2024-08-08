@@ -1,6 +1,3 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +10,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <style>
         body {
             padding-top: 20px; /* Ensure there's space at the top */
+            background-color: #cfcfcf;
         }
         #container {
             display: flex;
@@ -20,6 +18,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             justify-content: flex-start;
             align-items: center;
             min-height: 100vh; /* Ensure the container fills the viewport height */
+            position: relative; /* Ensure relative positioning for the watermark */
+        }
+        .watermark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('<?php echo base_url('assets/images/logo.png'); ?>');
+            background-repeat: repeat;
+            background-size: 50%;
+            background-position: center;
+            opacity: 0.1; /* Adjust the opacity as needed */
+            transform: rotate(-30deg); /* Tilt the image */
+            pointer-events: none; /* Ensure it doesn't interfere with clicks */
         }
         .answer-container {
             display: grid;
@@ -59,13 +72,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </style>
 </head>
 <script type="text/javascript"> 
-    function disableRightClick() 
-    {  
-        return false; 
-    } 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    // Disable developer tools shortcuts
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+            (e.keyCode == 123)) {                          // Prevent F12
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
-<body oncontextmenu="return disableRightClick()">
+<body>
     <div id="container">
+        <div class="watermark"></div> <!-- Watermark div -->
         <div id="body">
             <h1 class="mb-4">Create your quiz</h1>
             <form id="quiz-form" method="POST" action="<?php echo site_url('main_controller/submit'); ?>">
@@ -116,15 +141,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="confirmModalLabel">Are you sure?</h5>
+                    <h5 class="modal-title" id="confirmModalLabel">Confirm Submission</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to cancel your quiz creation? All unsaved changes will be lost.
+                    Are you sure you want to submit this quiz?
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                    <a href="<?php echo site_url('main_controller/create'); ?>" id="confirm-home" class="btn btn-danger">Yes, cancel and return to quiz selection</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirm-submit" class="btn btn-primary">Submit</button>
                 </div>
             </div>
         </div>
@@ -224,6 +249,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             event.preventDefault();
             const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
             confirmModal.show();
+        });
+
+        // Handle Form Submission
+        document.getElementById('quiz-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            confirmModal.show();
+
+            document.getElementById('confirm-submit').addEventListener('click', function() {
+                document.getElementById('quiz-form').submit(); // Submit the form when confirmed
+            });
         });
 
         // Initialize randomization on page load

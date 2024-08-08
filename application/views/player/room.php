@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
+        body{
+            background-color: #cfcfcf;
+        }
         .centered-container {
             text-align: center;
         }
@@ -28,6 +31,15 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
+        }
+        img.centered-image {
+            max-width: 100%;
+            height: auto;
+            width: 350px; /* Adjust size as needed */
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         .player-card {
             background-color: #fff;
@@ -56,13 +68,25 @@
     </style>
 </head>
 <script type="text/javascript"> 
-    function disableRightClick() 
-    {  
-        return false; 
-    } 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    // Disable developer tools shortcuts
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+            (e.keyCode == 123)) {                          // Prevent F12
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
-<body oncontextmenu="return disableRightClick()">
+<body>
     <div class="container mt-5">
+        <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
         <div id="flash-messages"></div>
         <div id="room-info">
             <h3 class="mb-4 text-center">Room PIN</h3>
@@ -181,7 +205,7 @@
         // Handle room status updates
         function handleRoomStatus(message) {
             if (message.hasStarted === 1) {
-                window.location.href = "<?php echo site_url('main_controller/start_game'); ?>";
+                window.location.href = "<?php echo site_url('/start_game'); ?>";
             } else if (message.isValid === 0 && !alertShown) {
                 Swal.fire({
                     title: "Room is not available.",

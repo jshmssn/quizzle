@@ -50,6 +50,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |		my-controller/my-method	-> my_controller/my_method
 */
 $route['default_controller'] = 'main_controller';
+$route['create'] = 'main_controller/create';
+$route['room'] = 'main_controller/room';
+$route['hostgame'] = 'main_controller/hostgame';
+$route['quiz_creator'] = 'main_controller/creator';
+$route['start_game'] = 'main_controller/start_game';
+$route['start_game_host'] = 'main_controller/start_game_host';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 

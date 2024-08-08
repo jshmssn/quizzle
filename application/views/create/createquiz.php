@@ -17,26 +17,34 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 			padding: 0;
 			height: 100vh;
 			overflow: hidden;
-			background-color: #D63232;
+			background-color: #cfcfcf;
  			background-size: 600% 600%;
 			animation: gradientBG 10s ease infinite;
 		}
 
 		#container {
 			display: flex;
+			flex-direction: column;
 			justify-content: center;
 			align-items: center;
 			height: 100vh;
+			text-align: center;
 		}
 
 		#body {
 			max-width: 500px;
 			width: 100%;
-			text-align: center;
 			padding: 20px;
 			box-shadow: 0 0 10px rgba(0,0,0,0.1);
 			border-radius: 8px;
 			background: rgba(255, 255, 255, 0.9);
+		}
+
+		img {
+			max-width: 100%;
+			height: auto;
+			width: 350px; /* Adjust size as needed */
+			margin-bottom: 20px;
 		}
 
 		@keyframes gradientBG {
@@ -65,15 +73,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 	</style>
 </head>
 <script type="text/javascript"> 
-    function disableRightClick() 
-    {  
-        return false; 
-    } 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    // Disable developer tools shortcuts
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+            (e.keyCode == 123)) {                          // Prevent F12
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
-<body oncontextmenu="return disableRightClick()">
+<body>
 	<div id="container">
+		<img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid" alt="Logo">
 		<div id="body">
-			<h1 class="mb-4">Choose a game below or <a href="<?php echo site_url('main_controller/creator'); ?>">Create your own.</a></h1>
+			<h1 class="mb-4">Choose a game below or <a href="<?php echo site_url('/quiz_creator'); ?>">Create your own.</a></h1>
 			<button>Math Quiz</button>
 			<h4>OR</h4>
 			<button>Game Trivia</button><br>

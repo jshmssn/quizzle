@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
+        body{
+            background-color: #cfcfcf;
+        }
         .centered-container {
             text-align: center;
         }
@@ -27,6 +30,15 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
+        }
+        img.centered-image {
+            max-width: 100%;
+            height: auto;
+            width: 350px; /* Adjust size as needed */
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         .player-card {
             background-color: #fff;
@@ -59,13 +71,25 @@
     </style>
 </head>
 <script type="text/javascript"> 
-    function disableRightClick() 
-    {  
-        return false; 
-    } 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    // Disable developer tools shortcuts
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+            (e.keyCode == 123)) {                          // Prevent F12
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
-<body oncontextmenu="return disableRightClick()">
+<body>
     <div class="container mt-5">
+        <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
         <?php if ($this->session->userdata('room_pin')): ?>
             <h3 class="mb-4 text-center">Room PIN</h3>
             <div class="form-group">
@@ -74,7 +98,7 @@
             <br>
             <h3 class="mb-4 text-center">Players</h3>
             <div class="centered-container mt-4">
-                <form action="<?php echo site_url('main_controller/start_game_host'); ?>" method="post">
+                <form action="<?php echo site_url('/start_game_host'); ?>" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
                     
                     <div class="players-box">

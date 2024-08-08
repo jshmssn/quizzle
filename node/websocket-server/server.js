@@ -92,7 +92,7 @@ wss.on('connection', (ws) => {
 
         // Set a timeout to check if the player reconnects
         setTimeout(async () => {
-          if (Date.now() - playerStatus.lastSeen >= 5000) { // 5 seconds timeout
+          if (Date.now() - playerStatus.lastSeen >= 2000) { // 2 seconds timeout
             try {
               // The player has not reconnected; update the status
               clients.delete(ws);
@@ -109,7 +109,7 @@ wss.on('connection', (ws) => {
               console.error('Error updating player status in database:', err);
             }
           }
-        }, 5000);
+        }, 2000);
       }
     }
   });
@@ -137,7 +137,7 @@ setInterval(() => {
   clients.forEach((client, ws) => {
     broadcastRoomStatus(client.roomPin);
   });
-}, 5000);
+}, 2000);
 
 // API routes
 app.get('/api/get_room_status', (req, res) => {

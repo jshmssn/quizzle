@@ -95,12 +95,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 </head>
-<script type="text/javascript">
-    function disableRightClick() {  
-        return false; 
-    } 
+<script type="text/javascript"> 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+
+    // Disable developer tools shortcuts
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+            (e.keyCode == 123)) {                          // Prevent F12
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
-<body oncontextmenu="return disableRightClick()">
+<body>
     <div class="container">
         <div class="player-list">
             <h3>Player List - Scores</h3>

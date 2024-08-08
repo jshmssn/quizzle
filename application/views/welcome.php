@@ -9,10 +9,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.min.js" integrity="sha512-Zq9o+E00xhhR/7vJ49mxFNJ0KQw1E1TMWkPTxrWcnpfEFDEXgUiwJHIKit93EW/XxE31HSI5GEOW06G6BF1AtA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/css/iziToast.css" integrity="sha512-DIW4FkYTOxjCqRt7oS9BFO+nVOwDL4bzukDyDtMO7crjUZhwpyrWBFroq+IqRe6VnJkTpRAS6nhDvf0w+wHmxg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script type="text/javascript"> 
-        function disableRightClick() 
-        {  
-            return false; 
-        } 
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+        });
+
+        // Disable developer tools shortcuts
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
+                (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
+                (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
+                (e.keyCode == 123)) {                          // Prevent F12
+                e.preventDefault();
+                return false;
+            }
+        });
     </script>
     <style>
         body {
@@ -20,26 +31,34 @@
             padding: 0;
             height: 100vh;
             overflow: hidden;
-            background-color: #D63232;
+            background-color: #cfcfcf;
             background-size: 600% 600%;
             animation: gradientBG 10s ease infinite;
         }
 
         #container {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            text-align: center;
         }
 
         #body {
             max-width: 500px;
             width: 100%;
-            text-align: center;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.9);
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            width: 350px; /* Adjust size as needed */
+            margin-bottom: 20px;
         }
 
         @keyframes gradientBG {
@@ -80,8 +99,9 @@
         }
     </style>
 </head>
-<body oncontextmenu="return disableRightClick();">
+<body>
     <div id="container">
+        <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid" alt="Logo">
         <div id="body">
             <h1 class="mb-4">Welcome Players!</h1>
             <form action="<?php echo site_url('main_controller/join'); ?>" method="post" id="joinForm">
@@ -95,7 +115,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Join</button>
             </form>
-            <a href="<?php echo site_url('main_controller/create'); ?>">Click here to host a room.</a>
+            <a href="<?php echo site_url('/create'); ?>">Click here to host a room.</a>
         </div>
     </div>
     <script>
