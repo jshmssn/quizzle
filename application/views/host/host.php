@@ -113,6 +113,7 @@
             </div>
         <?php else: ?>
             <p class="alert alert-warning">Room PIN could not be retrieved.</p>
+            <a href="<?php echo site_url('/') ?>" type="#">Go Home</a>
         <?php endif; ?>
     </div>
 
@@ -159,7 +160,7 @@
                         message: 'A player has joined the room.',
                         position: 'topRight'
                     });
-                } else if (message.type === 'leftPlayers') {
+                } else if (message.type === 'leftPlayer') {
                     updatePlayers(message.players);
                     iziToast.error({
                         title: 'Notice',
@@ -224,23 +225,23 @@
         const actionUrl = $('#form-start').attr('action');
         const roomPin = $('#room-pin').val();
 
-        $.ajax({
-            url: actionUrl,
-            type: 'POST',
-            data: { room_pin: roomPin },
-            success: function(response) {
-                // Handle the response
-            },
-            error: function(xhr, status, error) {
-                console.error('Error starting game:', error);
-                iziToast.error({
-                    title: 'Error',
-                    message: 'Failed to start the game. Please try again.',
-                    position: 'topRight'
-                });
-            }
+            $.ajax({
+                url: actionUrl,
+                type: 'POST',
+                data: { room_pin: roomPin },
+                success: function(response) {
+                    // Handle the response
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error starting game:', error);
+                    iziToast.error({
+                        title: 'Error',
+                        message: 'Failed to start the game. Please try again.',
+                        position: 'topRight'
+                    });
+                }
+            });
         });
-    });
 
         // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
         setInterval(function() {

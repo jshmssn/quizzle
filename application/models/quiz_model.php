@@ -99,8 +99,20 @@ class quiz_model extends CI_Model {
         $this->db->where('pin', $room_pin);
         $query = $this->db->get('rooms');
         
-        return $query->num_rows() > 0;
-    }    
+        if ($query->num_rows() > 0) {
+            $result = $query->row_array(); // Get the row as an associative array
+            return [
+                'isValid' => $result['isValid'],
+                'hasStarted' => $result['hasStarted']
+            ];
+        } else {
+            return [
+                'isValid' => 0,
+                'hasStarted' => 0
+            ];
+        }
+    }
+    
     
     public function invalidate_room($roomPin) {
         $data = array('isValid' => 0);

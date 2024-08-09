@@ -137,50 +137,72 @@
 </script>
 <body>
     <div class="overlay" id="overlay">
-        <div id="countdown" class="countdown">10</div>
+        <div id="countdown" class="countdown"></div>
         <div>Preparing...</div>
     </div>
     <div class="container">
         <div class="player-list">
             <h3>Player List - Scores</h3>
-            <ul>
-                <?php foreach($players as $player): ?>
-                    <li class="<?= ($player['name'] === $correct_answer) ? 'highlighted' : '' ?>">
-                        <?= htmlspecialchars($player['name'], ENT_QUOTES, 'UTF-8') ?>
-                        <span><?= htmlspecialchars($player['scores'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </li>
-                <?php endforeach; ?>
+            <ul id="playerList">
+                <!-- Player list will be populated here -->
             </ul>
         </div>
         <div class="content">
             <div class="question">
-                <h2><?= htmlspecialchars($question, ENT_QUOTES, 'UTF-8') ?></h2>
-                <input type="hidden" id="questionId" value="<?= htmlspecialchars($question_id, ENT_QUOTES, 'UTF-8') ?>">
+                <h2 id="questionText">Loading question...</h2>
+                <input type="hidden" id="questionId">
             </div>
             <div class="timer" id="timer">Time left: --</div>
-            <div class="answers">
-                <?php foreach($answers as $answer): ?>
-                    <button class="answer-button" data-answer="<?= htmlspecialchars($answer['answer_text'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($answer['answer_text'], ENT_QUOTES, 'UTF-8') ?></button>
-                <?php endforeach; ?>
+            <div class="answers" id="answers">
+                <!-- Answers will be populated here -->
             </div>
             <div class="waiting-message" id="waitingMessage">Waiting for other players to answer...</div>
-            <div class="correct-answer" id="correctAnswer">The correct answer is: <?= htmlspecialchars($correct_answer, ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="correct-answer" id="correctAnswer">The correct answer is: </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script>
+        // WebSocket URL, adjust as necessary
+        const socketUrl = `ws://${window.location.hostname}:3000`;
+        const socket = new WebSocket(socketUrl);
+
+        let isSocketOpen = false;
+        let alertShown = false;
+        let correctAnswer = '';
+
+        // Get roomPin from URL query parameters
+        function getRoomPin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('roomPin');
+        }
+
+        const roomPin = getRoomPin();
+
+        // Handle WebSocket open event
+        socket.onopen = function() {
+            console.log('WebSocket connection established.');
+            isSocketOpen = true;
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('overlay');
             const countdownElement = document.getElementById('countdown');
             const timerElement = document.getElementById('timer');
             const waitingMessage = document.getElementById('waitingMessage');
-            const correctAnswer = document.getElementById('correctAnswer');
-            const questionId = document.getElementById('questionId').value;
+            const correctAnswerElement = document.getElementById('correctAnswer');
+            const questionIdInput = document.getElementById('questionId');
+            const playerList = document.getElementById('playerList');
+            const answersElement = document.getElementById('answers');
 
-            // Start countdown from 10 seconds
-            let countdown = 10;
+            if (!roomPin) {
+                console.error('Room pin is required.');
+                return;
+            }
+
+            // Start countdown from 5 seconds
+            let countdown = 5;
             const countdownInterval = setInterval(() => {
                 countdownElement.textContent = countdown;
                 countdown--;
@@ -188,72 +210,146 @@
                     clearInterval(countdownInterval);
                     overlay.classList.add('hidden');
                     fetchQuestionDetails();
+                    fetchPlayers();
                 }
             }, 1000);
 
-            // Fetch the timer and question details
-            async function fetchQuestionDetails() {
+            // Fetch players from the server
+            async function fetchPlayers() {
                 try {
-                    const response = await fetch(`http://localhost:3000/get-time?questionId=${questionId}`);
+                    const response = await fetch(`http://localhost:3000/api/get_players?room_pin=${roomPin}`);
                     const data = await response.json();
-
+                    
                     if (response.ok) {
-                        const endTime = data.endTime;
-                        startTimer(endTime);
+                        const players = data.players;
+                        playerList.innerHTML = players.map(player => 
+                            `<li class="${player.name === correctAnswer ? 'highlighted' : ''}">
+                                ${player.name}
+                                <span>${player.scores}</span>
+                            </li>`
+                        ).join('');
                     } else {
-                        console.error('Failed to fetch question details:', data.error);
-                        timerElement.innerHTML = "Error fetching timer.";
+                        console.error('Failed to fetch players:', data.error);
                     }
                 } catch (error) {
-                    console.error('Error fetching question details:', error);
-                    timerElement.innerHTML = "Error fetching timer.";
+                    console.error('Error fetching players:', error);
                 }
             }
 
-            // Function to start the timer
-            function startTimer(endTime) {
-                const timerInterval = setInterval(() => {
-                    const timeLeft = Math.max(Math.floor((endTime - Date.now()) / 1000), 0);
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        timerElement.innerHTML = "Time's up!";
-                        displayCorrectAnswer();
+            // Fetch question details and answers
+            async function fetchQuestionDetails() {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/get_question?room_pin=${roomPin}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        const { question_text, answer_text, question_id } = data;
+                        document.getElementById('questionText').textContent = question_text;
+                        questionIdInput.value = question_id;
+
+                        // Fetch answers based on question_id
+                        fetchAnswers(question_id);
+                        document.getElementById('correctAnswer').textContent = `The correct answer is: ${answer_text}`;
+                        
+                        // Fetch question time and start the game timer
+                        const questionTime = await fetchQuestionTime();
+                        startGameTimer(questionTime);
                     } else {
-                        if (timeLeft >= 60) {
-                            const minutes = Math.floor(timeLeft / 60);
-                            const remainingSeconds = timeLeft % 60;
-                            timerElement.innerHTML = `Time left: ${minutes}m ${remainingSeconds}s`;
-                        } else {
-                            timerElement.innerHTML = `Time left: ${timeLeft}s`;
-                        }
+                        console.error('Failed to fetch question details:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error fetching question details:', error);
+                }
+            }
+
+            // Fetch answers based on question ID
+            async function fetchAnswers(questionId) {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/get-answers?question_id=${questionId}&room_pin=${roomPin}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        const answers = data.answers;
+                        answersElement.innerHTML = answers.map(answer => 
+                            `<button data-answer-id="${answer.id}">${answer.answer_text}</button>`
+                        ).join('');
+                    } else {
+                        console.error('Failed to fetch answers:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error fetching answers:', error);
+                }
+            }
+            
+            // Fetch question time
+            async function fetchQuestionTime() {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/get-question-time?room_pin=${roomPin}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        return data.time;
+                    } else {
+                        console.error('Failed to fetch question time:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error fetching question time:', error);
+                }
+                return 0; // Default to 0 if there's an error
+            }
+
+            // Start the game timer
+            function startGameTimer(duration) {
+                const endTime = Date.now() + duration * 1000;
+                const timerInterval = setInterval(() => {
+                    const remainingTime = Math.max(0, endTime - Date.now());
+                    const minutes = Math.floor(remainingTime / 60000);
+                    const seconds = Math.floor((remainingTime % 60000) / 1000);
+                    timerElement.textContent = `Time left: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                    if (remainingTime <= 0) {
+                        clearInterval(timerInterval);
+                        timerElement.textContent = 'Time is up!';
+                        showCorrectAnswer();
                     }
                 }, 1000);
             }
 
-            // Function to display the correct answer
-            function displayCorrectAnswer() {
-                correctAnswer.style.display = 'block';
+            // Show the correct answer
+            function showCorrectAnswer() {
+                correctAnswerElement.textContent = `The correct answer is: ${correctAnswer}`;
+                correctAnswerElement.style.display = 'block';
+                waitingMessage.style.display = 'none';
             }
 
-            // Function to handle answer selection
-            function handleAnswerSelection() {
-                document.querySelectorAll('.answer-button').forEach(button => {
-                    button.addEventListener('click', function() {
-                        // Mark selected answer
-                        document.querySelectorAll('.answer-button').forEach(btn => btn.classList.remove('selected'));
-                        this.classList.add('selected');
-
-                        // Show waiting message
-                        waitingMessage.style.display = 'block';
-
-                        // Disable all answer buttons
-                        document.querySelectorAll('.answer-button').forEach(btn => btn.disabled = true);
-                    });
-                });
+            // Submit the selected answer
+            function submitAnswer(selectedAnswer) {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ action: 'submit_answer', answer: selectedAnswer }));
+                    waitingMessage.style.display = 'block';
+                } else {
+                    console.error('WebSocket is not open.');
+                }
             }
 
-            // Initialize answer selection handling
-            handleAnswerSelection();
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                if (data.action === 'update_players') {
+                    updatePlayerList(data.players);
+                }
+
+                if (data.action === 'show_correct_answer') {
+                    correctAnswer = data.correct_answer;
+                    showCorrectAnswer();
+                }
+            };
+
+            function updatePlayerList(players) {
+                playerList.innerHTML = players.map(player => 
+                    `<li>${player.name} - ${player.scores}</li>`
+                ).join('');
+            }
         });
     </script>
 </body>

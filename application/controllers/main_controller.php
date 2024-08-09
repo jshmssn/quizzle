@@ -9,61 +9,6 @@ class main_controller extends CI_Controller {
         $this->load->library("session");
     }
 
-    public function get_time($id) {
-        // Initialize cURL session
-        $ch = curl_init();
-        
-        // Set cURL options
-        curl_setopt($ch, CURLOPT_URL, "http://localhost:3000/api/get-time/" . $id);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        
-        // Execute cURL request
-        $response = curl_exec($ch);
-        
-        // Close cURL session
-        curl_close($ch);
-
-        // Decode JSON response
-        $data = json_decode($response, true);
-        
-        // Extract time from response
-        $time = isset($data['time']) ? $data['time'] : 0;
-
-        // Pass time to the view
-        $this->load->view('quiz_view_host', ['time' => $time]);
-    }
-
-    public function get_time_player($id) {
-        // Initialize cURL session
-        $ch = curl_init();
-    
-        // Set cURL options
-        curl_setopt($ch, CURLOPT_URL, "http://localhost:3000/get-time?questionId=" . $id);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    
-        // Execute cURL request
-        $response = curl_exec($ch);
-    
-        // Check for cURL errors
-        if (curl_errno($ch)) {
-            echo 'cURL Error: ' . curl_error($ch);
-            curl_close($ch);
-            return;
-        }
-    
-        // Close cURL session
-        curl_close($ch);
-    
-        // Decode JSON response
-        $data = json_decode($response, true);
-    
-        // Extract time from response
-        $time = isset($data['endTime']) ? $data['endTime'] : 0;
-    
-        // Pass time to the view
-        $this->load->view('quiz_view', ['time' => $time]);
-    }    
-
     public function index() {
         $items = array('player_name', 'room_pin');
         $this->session->unset_userdata($items);
@@ -158,7 +103,17 @@ class main_controller extends CI_Controller {
         $room_pin = $this->input->post('room_pin');
         
         // Validate the input (e.g., check if the room_pin exists)
-        if ($this->quiz_model->validate_room_pin($room_pin)) {
+        $validation_result = $this->quiz_model->validate_room_pin($room_pin);
+
+        // Check if the room is valid and has started
+        if ($validation_result['isValid'] == '0' && $validation_result['hasStarted'] == '1') {
+            // Set an error message in flashdata
+            $this->session->set_flashdata("status", "error");
+            $this->session->set_flashdata("msg", "The game has already started or the room is invalid.");
+            
+            // Redirect to an error page or previous page
+            redirect('/error'); // Adjust the redirect URL as needed
+        } elseif ($validation_result['isValid'] == '1' && $validation_result['hasStarted'] == '0') {
             // Process the join logic and get the unique player name
             $unique_name = $this->quiz_model->process_join($name, $room_pin);
             
@@ -167,8 +122,6 @@ class main_controller extends CI_Controller {
             $this->session->set_userdata('room_pin', $room_pin);
             
             // Redirect to the room
-            $this->session->set_flashdata("status", "success");
-            $this->session->set_flashdata("msg", "A player has joined.");
             redirect('/room');
         } else {
             // Set an error message in flashdata
@@ -179,12 +132,12 @@ class main_controller extends CI_Controller {
             redirect($_SERVER["HTTP_REFERER"]);
         }
     }
-    
+
     public function room() {
         // Check if player is logged in by checking session data
         if (!$this->session->userdata('player_name') || !$this->session->userdata('room_pin')) {
             // If not, redirect to a different page (e.g., main page)
-            redirect('main_controller');
+            redirect(base_url());
         }
     
         // Load the confirmation view
@@ -216,7 +169,7 @@ class main_controller extends CI_Controller {
         }
     
         // Redirect to the index page
-        redirect('welcome');
+        redirect(base_url());
     }
     
     public function leftroom() {
@@ -229,13 +182,12 @@ class main_controller extends CI_Controller {
             // Call the model method to delete the participant
             $this->quiz_model->left_participant($playerName, $roomPin);
     
-            // Unset the player name and room PIN from session data
+            // Unset the player name from session data
             $this->session->unset_userdata('player_name');
-            $this->session->unset_userdata('room_pin');
         }
     
         // Redirect to the welcome page
-        redirect('welcome');
+        redirect(base_url());
     }
 
     public function get_room_status() {

@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
     <style>
-        body{
+        body {
             background-color: #cfcfcf;
         }
         .centered-container {
@@ -35,7 +35,7 @@
         img.centered-image {
             max-width: 100%;
             height: auto;
-            width: 350px; /* Adjust size as needed */
+            width: 350px;
             margin-bottom: 20px;
             display: block;
             margin-left: auto;
@@ -67,23 +67,6 @@
         }
     </style>
 </head>
-<script type="text/javascript"> 
-    // Disable right-click context menu
-    document.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-    });
-
-    // Disable developer tools shortcuts
-    document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
-            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
-            (e.keyCode == 123)) {                          // Prevent F12
-            e.preventDefault();
-            return false;
-        }
-    });
-</script>
 <body>
     <div class="container mt-5">
         <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
@@ -105,7 +88,7 @@
         <p id="no-room-pin" class="alert alert-warning d-none">Room PIN could not be retrieved.</p>
     </div>
 
-    <script>
+    <script type="text/javascript">
         // Get the room pin and player name
         const roomPin = document.getElementById('room-pin').value;
         const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
@@ -137,7 +120,7 @@
                         message: 'A player has joined the room.',
                         position: 'topRight'
                     });
-                } else if (message.type === 'leftPlayers') {
+                } else if (message.type === 'leftPlayer') {
                     updatePlayers(message.players);
                     iziToast.error({
                         title: 'Notice',
@@ -158,6 +141,7 @@
             }
         };
 
+        // Handle WebSocket close event
         socket.onclose = function() {
             console.log('WebSocket connection closed.');
             isSocketOpen = false;
@@ -167,12 +151,6 @@
                     location.reload(); // Reload the page to attempt reconnection
                 }
             }, 3000); // Adjust the delay as necessary
-        };
-        
-        // Handle WebSocket close event
-        socket.onclose = function() {
-            console.log('WebSocket connection closed.');
-            isSocketOpen = false;
         };
 
         // Handle WebSocket error event
@@ -205,7 +183,7 @@
         // Handle room status updates
         function handleRoomStatus(message) {
             if (message.hasStarted === 1 && message.isValid === 0) {
-                window.location.href = "<?php echo site_url('/start_game'); ?>";
+                window.location.href = `<?php echo site_url('/start_game'); ?>?roomPin=${roomPin}`;
             } else if (message.isValid === 0 && !alertShown) {
                 Swal.fire({
                     title: "Room is not available.",
