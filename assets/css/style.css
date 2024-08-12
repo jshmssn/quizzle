@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+body {
+    background-color: #ffffff;
+    color: #000000;
+    font-family: 'Press Start 2P', cursive;
+}
+.container {
+    margin-top: 50px;
+}
+.btn {
+    font-family: 'Press Start 2P', cursive;
+    margin: 10px;
+    background-color: #cc0000;
+    color: #fff;
+}
+.btn:hover {
+    font-family: 'Press Start 2P', cursive;
+    margin: 10px;
+    background-color: #c3c3c3;
+    color: #000000;
+}
+.image-wrapper {
+    background-color: #e9e518; /* Lighter red background color */
+    padding: 20px; /* Adds padding around the image */
+    border-radius: 10px; /* Optional: adds rounded corners */
+    display: inline-block; /* Ensure the background color wraps tightly around the image */
+    margin-bottom: 50px;
+}
+.img-fluid {
+    max-width: 100%;
+    height: auto;
+    width: 350px;
+    margin-bottom: 20px;
+}
+img{
+    user-drag: none; /* For WebKit browsers */
+    -webkit-user-drag: none; /* For WebKit browsers */
+    -moz-user-drag: none; /* For Firefox */
+    -ms-user-drag: none; /* For Internet Explorer/Edge */
+    drag-and-drop: none; 
+}
+#joinForm {
+    width: 80%; /* Adjust width as needed */
+    margin: 0 auto; /* Center the form horizontally */
+}
+#joinForm input{
+    text-align: center;
+}
+

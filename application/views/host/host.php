@@ -8,10 +8,9 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
+    <script src="<?= base_url('assets/scripts/preventInspect.js')?>"></script>
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
     <style>
-        body {
-            background-color: #cfcfcf;
-        }
         .centered-container {
             text-align: center;
         }
@@ -30,15 +29,6 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-        }
-        img.centered-image {
-            max-width: 100%;
-            height: auto;
-            width: 350px; /* Adjust size as needed */
-            margin-bottom: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
         }
         .player-card {
             background-color: #fff;
@@ -61,7 +51,7 @@
         @media (max-width: 576px) {
             .player-card {
                 flex: 1 1 80px;
-                max-width: 120px;
+                max-width: 150px;
             }
         }
         .disabled {
@@ -88,15 +78,17 @@
     });
 </script>
 <body>
-    <div class="container mt-5">
-        <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
+    <div class="container text-center">
+        <div class="image-wrapper">
+            <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
+        </div>
         <?php if ($this->session->userdata('room_pin')): ?>
-            <h3 class="mb-4 text-center">Room PIN</h3>
+            <h4 class="mb-3 text-center">Room PIN</h4>
             <div class="form-group">
                 <input type="text" id="room-pin" class="form-control text-center form-control-lg" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>" readonly>
             </div>
             <br>
-            <h3 class="mb-4 text-center">Players</h3>
+            <h4 class="mb-3 text-center">Players Joined</h4>
             <div class="centered-container mt-4">
                 <form id="form-start" action="<?php echo site_url('main_controller/start'); ?>" method="post">
                     <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
@@ -107,7 +99,7 @@
                         </div>
                     </div>
 
-                    <button type="button" id="start-button" class="btn btn-primary btn-lg mt-4">Start Game</button><br>
+                    <button type="button" id="start-button" class="btn btn-light btn-lg mt-4">Start Game</button><br>
                     <a href="<?php echo site_url('main_controller/quitroom') ?>" type="#">Cancel Room</a>
                 </form>
             </div>
@@ -204,7 +196,7 @@
                 });
                 $('#start-button').removeClass('disabled'); // Enable the button
             } else {
-                $('#players-container').append('<div class="player-card">No participants yet.</div>');
+                $('#players-container').append('<div class="player-card">No players yet.</div>');
                 $('#start-button').addClass('disabled'); // Disable the button
             }
         }

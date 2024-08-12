@@ -49,7 +49,12 @@
             background-color: #007bff;
             color: #fff;
         }
-        .answers .selected {
+        .answers button.disabled {
+            background-color: #e0e0e0;
+            color: #888;
+            cursor: not-allowed;
+        }
+        .answers button.selected {
             background-color: #007bff;
             color: #fff;
         }
@@ -273,6 +278,14 @@
                         answersElement.innerHTML = answers.map(answer => 
                             `<button data-answer-id="${answer.id}">${answer.answer_text}</button>`
                         ).join('');
+
+                        // Add click event listeners to answer buttons
+                        document.querySelectorAll('.answers button').forEach(button => {
+                            button.addEventListener('click', () => {
+                                const selectedAnswerId = button.getAttribute('data-answer-id');
+                                submitAnswer(selectedAnswerId, button);
+                            });
+                        });
                     } else {
                         console.error('Failed to fetch answers:', data.error);
                     }
@@ -295,7 +308,7 @@
                 } catch (error) {
                     console.error('Error fetching question time:', error);
                 }
-                return 0; // Default to 0 if there's an error
+                return 0;
             }
 
             // Start the game timer
@@ -323,9 +336,20 @@
             }
 
             // Submit the selected answer
-            function submitAnswer(selectedAnswer) {
+            function submitAnswer(selectedAnswer, selectedButton) {
                 if (socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({ action: 'submit_answer', answer: selectedAnswer }));
+                    
+                    // Disable all answer buttons and highlight the selected one
+                    document.querySelectorAll('.answers button').forEach(button => {
+                        button.disabled = true;  // Disable button
+                        if (button !== selectedButton) {
+                            button.classList.add('disabled');
+                        } else {
+                            button.classList.add('selected');
+                        }
+                    });
+                    
                     waitingMessage.style.display = 'block';
                 } else {
                     console.error('WebSocket is not open.');
@@ -341,6 +365,7 @@
 
                 if (data.action === 'show_correct_answer') {
                     correctAnswer = data.correct_answer;
+                    waitingMessage.style.display = 'none';
                     showCorrectAnswer();
                 }
             };

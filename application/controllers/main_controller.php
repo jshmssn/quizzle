@@ -34,7 +34,7 @@ class main_controller extends CI_Controller {
     
             // Generate room_id and PIN
             $roomId = uniqid(); // You might want to use a different method to generate unique room IDs
-            $pin = rand(1000, 9999); // Generate a 4-digit PIN
+            $pin = rand(10000, 99999); // Generate a 5-digit PIN
     
             // Save the questions
             foreach ($questions as $question) {
@@ -71,7 +71,7 @@ class main_controller extends CI_Controller {
             $this->session->set_flashdata('msg', 'No quiz questions provided.');
         }
     
-        redirect('/hostgame');
+        redirect('room/host/'. $pin);
     }
     
     public function hostgame() {
@@ -122,7 +122,7 @@ class main_controller extends CI_Controller {
             $this->session->set_userdata('room_pin', $room_pin);
             
             // Redirect to the room
-            redirect('/room');
+            redirect('room/'. $room_pin);
         } else {
             // Set an error message in flashdata
             $this->session->set_flashdata("status", "error");
@@ -252,10 +252,7 @@ class main_controller extends CI_Controller {
         
         // Shuffle the answers array to randomize the order
         shuffle($answers);
-        
-        // Get all players and their scores
-        $players = $this->quiz_model->get_players();
-        
+                
         // Find the correct answer
         $correct_answer = null;
         foreach ($answers as $answer) {
@@ -271,8 +268,7 @@ class main_controller extends CI_Controller {
             'question_id' => $question_id,
             'time' => $question_time, // Include the question's time
             'answers' => $answers, // Pass the shuffled answers
-            'correct_answer' => $correct_answer, // Include the correct answer in the data
-            'players' => $players
+            'correct_answer' => $correct_answer // Include the correct answer in the data
         ];
         
         // Load the view with data

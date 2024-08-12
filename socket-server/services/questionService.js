@@ -56,8 +56,6 @@ async function getQuestionTime(roomPin) {
       SELECT time 
       FROM questions 
       WHERE room_pin = ? AND isValid = 1 
-      ORDER BY RAND() 
-      LIMIT 1
     `;
     db.query(query, [roomPin], (err, results) => {
       if (err) return reject(new Error('Database query failed'));

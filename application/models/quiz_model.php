@@ -169,13 +169,5 @@ class quiz_model extends CI_Model {
         $query = $this->db->get('answers');
         return $query->row_array(); // Assuming there's only one correct answer
     }
-    
-    // Fetch all players and their scores
-    public function get_players() {
-        $this->db->order_by('scores', 'DESC');
-        $query = $this->db->get('participants');
-        return $query->result_array();
-    }
-    
 }
 ?>

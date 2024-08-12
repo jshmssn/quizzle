@@ -9,10 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
     <style>
-        body {
-            background-color: #cfcfcf;
-        }
+    <style>
         .centered-container {
             text-align: center;
         }
@@ -31,15 +30,6 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
-        }
-        img.centered-image {
-            max-width: 100%;
-            height: auto;
-            width: 350px;
-            margin-bottom: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
         }
         .player-card {
             background-color: #fff;
@@ -68,21 +58,23 @@
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
+    <div class="container text-center">
+        <div class="image-wrapper">
+            <img src="<?php echo base_url('assets/images/logo.png'); ?>" class="img-fluid centered-image" alt="Logo">
+        </div>        
         <div id="flash-messages"></div>
         <div id="room-info">
-            <h3 class="mb-4 text-center">Room PIN</h3>
+            <h3 class="mb-3 text-center">Room PIN</h3>
             <div class="form-group">
                 <input type="text" class="form-control text-center form-control-lg" id="room-pin" value="<?php echo $this->session->userdata('room_pin'); ?>" readonly>
             </div>
-            <h3 class="mb-4 text-center">Players</h3>
+            <h3 class="mb-3 text-center">Players</h3>
             <div class="centered-container mt-4">
                 <div class="players-box">
                     <div id="players-container" class="players-container"></div>
                 </div>
-                <h3 class="mt-4">Waiting for the host to start the game.</h3>
-                <a style="font-weight: 700;" id="left-room" href="<?php echo site_url('main_controller/leftroom') ?>" class="btn btn-danger">Leave Room</a>
+                <h3 class="mt-2">Waiting for the host to start the game.</h3>
+                <a style="font-weight: 700;" id="left-room" href="<?php echo site_url('main_controller/leftroom') ?>" class="btn btn-light">Leave Room</a>
             </div>
         </div>
         <p id="no-room-pin" class="alert alert-warning d-none">Room PIN could not be retrieved.</p>
@@ -176,7 +168,7 @@
                     $('#players-container').append('<div class="player-card">' + $('<div>').text(displayName).html() + '</div>');
                 });
             } else {
-                $('#players-container').append('<div class="player-card">No participants yet.</div>');
+                $('#players-container').append('<div class="player-card">No players yet.</div>');
             }
         }
 

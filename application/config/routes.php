@@ -51,8 +51,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 $route['default_controller'] = 'main_controller';
 $route['create'] = 'main_controller/create';
-$route['room'] = 'main_controller/room';
-$route['hostgame'] = 'main_controller/hostgame';
+$route['room/(:num)'] = 'main_controller/room/$1';
+$route['room/host/(:num)'] = 'main_controller/hostgame/$1';
 $route['quiz_creator'] = 'main_controller/creator';
 $route['start_game'] = 'main_controller/start_game';
 $route['start_game_host'] = 'main_controller/start_game_host';
