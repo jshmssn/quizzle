@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/css/iziToast.min.css">
     <script src="https://cdn.jsdelivr.net/npm/izitoast@1.4.0/dist/js/iziToast.min.js"></script>
+    <script src="<?= base_url('assets/scripts/preventInspect.js')?>"></script>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
     <style>
     <style>
