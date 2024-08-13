@@ -60,23 +60,7 @@
         }
     </style>
 </head>
-<script type="text/javascript"> 
-    // Disable right-click context menu
-    document.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-    });
-
-    // Disable developer tools shortcuts
-    document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
-            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
-            (e.keyCode == 123)) {                          // Prevent F12
-            e.preventDefault();
-            return false;
-        }
-    });
-</script>
+<script src="<?= base_url('assets/scripts/preventInspect.js')?>"></script>
 <body>
     <div class="container text-center">
         <div class="image-wrapper">
@@ -91,8 +75,7 @@
             <h4 class="mb-3 text-center">Players Joined</h4>
             <div class="centered-container mt-4">
                 <form id="form-start" action="<?php echo site_url('main_controller/start'); ?>" method="post">
-                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">
-                    
+                    <input type="hidden" name="room_pin" value="<?php echo htmlspecialchars($this->session->userdata('room_pin'), ENT_QUOTES, 'UTF-8'); ?>">         
                     <div class="players-box">
                         <div id="players-container" class="players-container">
                             <!-- Player cards will be updated here -->

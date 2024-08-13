@@ -28,7 +28,7 @@ class main_controller extends CI_Controller {
         $this->session->unset_userdata($items);
     
         $questions = $this->input->post('questions');
-        
+    
         if (!empty($questions)) {
             $success = true;
     
@@ -36,14 +36,61 @@ class main_controller extends CI_Controller {
             $roomId = uniqid(); // You might want to use a different method to generate unique room IDs
             $pin = rand(10000, 99999); // Generate a 5-digit PIN
     
+            // Create directory for images
+            $uploadPath = './assets/images/quiz/' . $roomId . '/';
+            if (!is_dir($uploadPath)) {
+                if (!mkdir($uploadPath, 0777, true)) {
+                    // Directory creation failed
+                    $this->session->set_flashdata('status', 'error');
+                    $this->session->set_flashdata('msg', 'Failed to create upload directory.');
+                    redirect('room/host/' . $pin);
+                    return;
+                }
+            }
+    
+            // Load the upload library
+            $this->load->library('upload');
+    
+            // Set upload configurations
+            $config['upload_path'] = $uploadPath;
+            $config['allowed_types'] = 'gif|jpg|png';
+            $config['max_size'] = 2048; // 2MB max size
+    
+            $this->upload->initialize($config);
+    
             // Save the questions
-            foreach ($questions as $question) {
+            foreach ($questions as $index => $question) {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
                 $time = (int) $question['time']; // New line to get the time value
     
-                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $pin, $time)) {
+                $imagePath = '';
+                if (isset($_FILES['questions']['name'][$index]['image']) && $_FILES['questions']['name'][$index]['image'] != '') {
+                    // Debugging: print file info
+                    log_message('debug', print_r($_FILES, true));
+    
+                    $_FILES['file']['name'] = $_FILES['questions']['name'][$index]['image'];
+                    $_FILES['file']['type'] = $_FILES['questions']['type'][$index]['image'];
+                    $_FILES['file']['tmp_name'] = $_FILES['questions']['tmp_name'][$index]['image'];
+                    $_FILES['file']['error'] = $_FILES['questions']['error'][$index]['image'];
+                    $_FILES['file']['size'] = $_FILES['questions']['size'][$index]['image'];
+    
+                    if (!$this->upload->do_upload('file')) {
+                        $success = false;
+                        // Capture and log the error
+                        $error = $this->upload->display_errors();
+                        log_message('error', 'Upload error: ' . $error);
+                        $this->session->set_flashdata('status', 'error');
+                        $this->session->set_flashdata('msg', 'Image upload failed: ' . $error);
+                        redirect('room/host/' . $pin);
+                        return;
+                    }
+                    $uploadData = $this->upload->data();
+                    $imagePath = 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+                }
+    
+                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath)) {
                     $success = false;
                     break;
                 }
@@ -54,7 +101,7 @@ class main_controller extends CI_Controller {
                 if ($this->quiz_model->save_room($roomId, $pin)) {
                     $this->session->set_flashdata('status', 'success');
                     $this->session->set_flashdata('msg', 'Quiz questions submitted successfully and room created!');
-                    
+    
                     // Store roomId and roomPin in regular session data
                     $this->session->set_userdata('roomId', $roomId);
                     $this->session->set_userdata('room_pin', $pin);
@@ -71,8 +118,8 @@ class main_controller extends CI_Controller {
             $this->session->set_flashdata('msg', 'No quiz questions provided.');
         }
     
-        redirect('room/host/'. $pin);
-    }
+        redirect('room/host/' . $pin);
+    }    
     
     public function hostgame() {
         $roomPin = $this->session->userdata('room_pin');
@@ -147,13 +194,14 @@ class main_controller extends CI_Controller {
     public function quitroom() {    
         // Get the room pin from session data
         $roomPin = $this->session->userdata('room_pin');
+        $roomId = $this->session->userdata('roomId');
     
         // Check if the room pin exists in the session
-        if ($roomPin) {
+        if ($roomPin && $roomId) {
             // Update the room's validity status
-            $this->quiz_model->invalidate_room($roomPin);
+            $this->quiz_model->invalidate_room($roomId);
             $this->quiz_model->exit_all_participants($roomPin);
-            $this->quiz_model->delete_room_questions($roomPin);
+            $this->quiz_model->delete_room_questions($roomId);
     
             // Unset the roomPin session data
             $items = array('player_name', 'room_pin');

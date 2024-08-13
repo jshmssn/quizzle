@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="<?= base_url('assets/scripts/preventInspect.js')?>"></script>
     <style>
         body {
             padding-top: 20px; /* Ensure there's space at the top */
@@ -20,22 +21,8 @@
             min-height: 100vh; /* Ensure the container fills the viewport height */
             position: relative; /* Ensure relative positioning for the watermark */
         }
-        .watermark {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('<?php echo base_url('assets/images/logo.png'); ?>');
-            background-repeat: repeat;
-            background-size: 50%;
-            background-position: center;
-            opacity: 0.08; /* Adjust the opacity as needed */
-            transform: rotate(-30deg); /* Tilt the image */
-            pointer-events: none; /* Ensure it doesn't interfere with clicks */
-        }
         .answer-container {
-            display: grid;
+            display: flex;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
@@ -71,30 +58,12 @@
         }
     </style>
 </head>
-<script type="text/javascript"> 
-    // Disable right-click context menu
-    document.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-    });
-
-    // Disable developer tools shortcuts
-    document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Prevent Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.keyCode == 74) || // Prevent Ctrl+Shift+J
-            (e.ctrlKey && e.keyCode == 85) ||              // Prevent Ctrl+U
-            (e.keyCode == 123)) {                          // Prevent F12
-            e.preventDefault();
-            return false;
-        }
-    });
-</script>
 <body>
     <div id="container">
-        <div class="watermark"></div> <!-- Watermark div -->
         <div id="body">
             <h1 class="mb-4">Create your quiz</h1>
-            <form id="quiz-form" method="POST" action="<?php echo site_url('main_controller/submit'); ?>">
-                <div id="quiz-container">
+            <form id="quiz-form" method="POST" action="<?php echo site_url('main_controller/submit'); ?>" enctype="multipart/form-data">
+                <div id="quiz-container" id="quiz-def">
                     <div class="quiz-set mb-5" data-index="1">
                         <div class="mb-3">
                             <label for="question-1" class="form-label">Question 1</label>
@@ -129,6 +98,7 @@
                     </div>
                 </div>
                 <button id="add-quiz" type="button" class="btn btn-primary">Add more quiz</button>
+                <button id="add-image-quiz" type="button" class="btn btn-primary">Add Image Question</button>
                 <button id="submit-button" type="submit" class="btn btn-success">Submit</button>
                 <button id="home-button" class="btn btn-danger">Cancel</button>
             </form>
@@ -186,7 +156,7 @@
             const newQuizSet = document.createElement('div');
             newQuizSet.className = 'quiz-set mb-5';
             newQuizSet.dataset.index = quizIndex;
-            newQuizSet.style.backgroundColor = colors[(quizIndex - 1) % colors.length];
+
             newQuizSet.innerHTML = `
                 <div class="mb-3">
                     <label for="question-${quizIndex}" class="form-label">Question ${quizIndex}</label>
@@ -218,53 +188,74 @@
                         <input type="radio" name="questions[${quizIndex}][correct]" value="3" required> Correct
                     </div>
                 </div>
-                <button class="btn btn-danger remove-btn">Remove</button>
+                <button type="button" class="btn btn-danger remove-btn" onclick="removeQuizSet(this)">Remove</button>
             `;
-
             quizContainer.appendChild(newQuizSet);
         });
 
-        // Remove button functionality
-        document.getElementById('quiz-container').addEventListener('click', function(event) {
-            if (event.target && event.target.classList.contains('remove-btn')) {
-                if (confirm("Are you sure you want to remove Question #" + quizIndex + "?")) {
-                    quizIndex--;
-                    event.target.parentElement.remove();
-                }
-            }
+        document.getElementById('add-image-quiz').addEventListener('click', function() {
+            quizIndex++;
+            const quizContainer = document.getElementById('quiz-container');
+
+            const newQuizSet = document.createElement('div');
+            newQuizSet.className = 'quiz-set mb-5';
+            newQuizSet.dataset.index = quizIndex;
+
+            newQuizSet.innerHTML = `
+                <div class="mb-3">
+                    <label for="question-${quizIndex}" class="form-label">Question ${quizIndex}</label>
+                    <input type="text" id="question-${quizIndex}" name="questions[${quizIndex}][text]" class="form-control question" placeholder="Enter question" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time-${quizIndex}" class="form-label">Time (in seconds)</label>
+                    <input type="number" id="time-${quizIndex}" name="questions[${quizIndex}][time]" class="form-control" placeholder="Enter time" required>
+                </div>
+                <div class="mb-3">
+                    <label for="image-${quizIndex}" class="form-label">Upload Image</label>
+                    <input type="file" id="image-${quizIndex}" name="questions[${quizIndex}][image]" class="form-control" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <label for="fill-answer-${quizIndex}" class="form-label">Fill in the Blank Answer</label>
+                    <input type="text" id="fill-answer-${quizIndex}" name="questions[${quizIndex}][answers][0]" class="form-control" placeholder="Enter correct answer" required>
+                    <input type="radio" hidden name="questions[${quizIndex}][correct]" value="0" checked>
+                </div>
+                <button type="button" class="btn btn-danger remove-btn" onclick="removeQuizSet(this)">Remove</button>
+            `;
+            quizContainer.appendChild(newQuizSet);
         });
 
+        function removeQuizSet(button) {
+            quizIndex--;
+            button.closest('.quiz-set').remove();
+        }
 
-        // Scroll to Top Button Functionality
-        const scrollToTopButton = document.getElementById('scroll-to-top');
+        $(document).ready(function(){
+            $('#confirm-submit').click(function(){
+                $('#quiz-form').submit();
+            });
+            $('#home-button').on('click', function(e) {
+                e.preventDefault();
+                $('#confirmModal').modal('show');
+            });
+            $('#submit-button').on('click', function(e) {
+                e.preventDefault();
+                $('#submitModal').modal('show');
+            });
+        });
 
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollToTopButton.style.display = 'block';
+        window.addEventListener('scroll', function() {
+            const scrollTopButton = document.getElementById('scroll-to-top');
+            if (window.pageYOffset > 200) {
+                scrollTopButton.style.display = 'block';
             } else {
-                scrollToTopButton.style.display = 'none';
+                scrollTopButton.style.display = 'none';
             }
         });
 
-        scrollToTopButton.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-
-        // Handle Home Button Click
-        document.getElementById('home-button').addEventListener('click', (event) => {
-            event.preventDefault();
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-            confirmModal.show();
-        });
-
-        // Handle Form Submission
-        document.getElementById('quiz-form').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
-            const confirmModal = new bootstrap.Modal(document.getElementById('submitModal'));
-            confirmModal.show();
-
-            document.getElementById('confirm-submit').addEventListener('click', function() {
-                document.getElementById('quiz-form').submit(); // Submit the form when confirmed
+        document.getElementById('scroll-to-top').addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
             });
         });
     </script>

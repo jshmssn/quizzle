@@ -7,12 +7,13 @@ class quiz_model extends CI_Model {
         $this->load->database();
     }
 
-    public function save_question($questionText, $answers, $correctAnswerIndex, $roomPin, $time) {
+    public function save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath) {
         // Insert the question
         $data = array(
             'question_text' => $questionText,
-            'room_pin' => $roomPin,
-            'time' => $time // Add time to the data array
+            'room_id' => $roomId,
+            'time' => $time,
+            'image_path' => $imagePath // Add image_path to the data array
         );
         $this->db->insert('questions', $data);
     
@@ -114,9 +115,9 @@ class quiz_model extends CI_Model {
     }
     
     
-    public function invalidate_room($roomPin) {
+    public function invalidate_room($roomId) {
         $data = array('isValid' => 0);
-        $this->db->where('pin', $roomPin);
+        $this->db->where('room_id', $roomId);
         $this->db->update('rooms', $data);
     
         return ($this->db->affected_rows() > 0);
@@ -133,8 +134,8 @@ class quiz_model extends CI_Model {
         $this->db->delete('participants');
     }
 
-    public function delete_room_questions($roomPin) {
-        $this->db->where('room_pin', $roomPin);
+    public function delete_room_questions($roomId) {
+        $this->db->where('room_id', $roomId);
         $this->db->delete('questions');
     }
 
