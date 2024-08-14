@@ -176,7 +176,7 @@
 
 <!-- Will display Waiting and Correct answer after all players have answered -->
 <div id="waitingMessage" class="text-center mt-3" hidden>Waiting for other players to answer...</div>
-<div id="correctAnswer" class="text-center mt-3" hidden>The correct answer will be displayed here.</div>
+<div id="correctAnswer" class="text-center mt-3" hidden>The correct answer is </div>
 
 <!-- Bootstrap JS and dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -267,6 +267,7 @@
                         questionNumberElement.textContent = `Question ${index + 1} out of ${totalQuestions}`;
 
                         fetchAnswers(questionId, questTime, totalQuestions); // Pass totalQuestions to fetchAnswers
+                        fetchCorrectAnswers(questionId);
                         loadImage(questionId);
                     });
                 } else {
@@ -312,6 +313,39 @@
             }
         }
 
+        async function fetchCorrectAnswers(questionId) {
+            try {
+                const response = await $.ajax({
+                    url: '<?= site_url('main_controller/fetch_correct_answers')?>',
+                    type: 'POST',
+                    data: { question_id: questionId },
+                    dataType: 'json'
+                });
+
+                if (response.status === 'success') {
+                    console.log('Correct Answer:', response.data);
+
+                    const correctAnswer = document.getElementById('correctAnswer');
+                    if (correctAnswer) {
+                        correctAnswer.innerHTML = ''; // Clear any previous content
+
+                        // Assuming response.data is an array of correct answers
+                        response.data.forEach(answer => {
+                            const answerText = answer.answer_text; // Adjust this if your data structure is different
+                            correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
+                        });
+                    } else {
+                        console.error('Element with id "correctAnswer" not found.');
+                    }
+
+                } else {
+                    console.error('Error:', response.message);
+                }
+            } catch (error) {
+                console.error('AJAX error:', error);
+            }
+        }
+
         function startCountdown(duration) {
             let timeLeft = duration;
             const countdownBar = document.querySelector('.countdown-bar');
@@ -328,24 +362,26 @@
                 // If time is up
                 if (timeLeft < 0) {            
                     clearInterval(countdownInterval);
-                    
-                    // Show waiting message and hide correct answer
-                    const waitingMessage = document.getElementById('waitingMessage');
-                    const correctAnswer = document.getElementById('correctAnswer');
-                    const answerButtons = document.querySelectorAll('.btn.answer-btn');
-
-                    waitingMessage.style.display = 'none';
-                    correctAnswer.style.display = 'block';
-                    correctAnswer.removeAttribute('hidden');
-
-                    answerButtons.forEach(btn => {
-                        btn.classList.add('disabled');
-                        btn.disabled = true;
-                    });
+                    showAnswer();
                 }
             }, 1000);
         }
 
+        function showAnswer(){
+            // Show waiting message and hide correct answer
+            const waitingMessage = document.getElementById('waitingMessage');
+                const correctAnswer = document.getElementById('correctAnswer');
+                const answerButtons = document.querySelectorAll('.btn.answer-btn');
+
+                waitingMessage.style.display = 'none';
+                correctAnswer.style.display = 'block';
+                correctAnswer.removeAttribute('hidden');
+
+            answerButtons.forEach(btn => {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            });
+        }
         function loadImage(questId) {
             $.ajax({
                 url: '<?= site_url('main_controller/get_image_path') ?>',

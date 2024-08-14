@@ -329,6 +329,19 @@ class main_controller extends CI_Controller {
             echo json_encode(['status' => 'error', 'message' => 'No answers found for this question']);
         }
     }
+
+    public function fetch_correct_answers() {
+        $question_id = $this->input->post('question_id');
+    
+        $this->load->model('quiz_model');
+        $answers = $this->quiz_model->get_correct_answers($question_id);
+    
+        if ($answers) {
+            echo json_encode(['status' => 'success', 'data' => $answers]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'No correct answers found.']);
+        }
+    }    
     
     public function start_game() {
         // Load the view with data

@@ -187,7 +187,7 @@ class quiz_model extends CI_Model {
         return $query->result_array();
     }    
 
-    // Fetch answers for a given question
+    // Fetch correct answer for a given question
     public function get_correct_answers($question_id) {
         $this->db->select('answer_text');
         $this->db->where('question_id', $question_id);
