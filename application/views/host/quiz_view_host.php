@@ -177,7 +177,7 @@
             const questionId = document.getElementById('questionId').value;
 
             // Start countdown from 10 seconds
-            let countdown = 10;
+            let countdown = 5;
             const countdownInterval = setInterval(() => {
                 countdownElement.textContent = countdown;
                 countdown--;

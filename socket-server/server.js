@@ -3,7 +3,6 @@ const http = require('http');
 const WebSocket = require('ws');
 const applyCors = require('./middlewares/cors');
 const applyBodyParser = require('./middlewares/bodyParser');
-const apiRoutes = require('./routes/api');
 const { broadcastToRoom } = require('./utils/websocketUtils');
 const playerController = require('./controllers/playerController');
 const roomController = require('./controllers/roomController');
@@ -15,7 +14,6 @@ const wss = new WebSocket.Server({ server });
 applyCors(app);
 applyBodyParser(app);
 
-app.use('/api', apiRoutes);
 app.use(express.static('public'));
 
 const clients = new Map(); // Map to store clients and their associated room PINs

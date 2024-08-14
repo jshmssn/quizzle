@@ -272,55 +272,67 @@ class main_controller extends CI_Controller {
         echo json_encode($response);
     }
 
-    public function start_game() {
-        // Load the quiz model
+    public function fetch_room_id() {
+        $roomPin = $this->input->post('roomPin');
+
+        if ($roomPin) {
+            $roomId = $this->quiz_model->get_room_id_by_pin($roomPin);
+            echo $roomId ? $roomId : 'Room ID not found'; // Send the response
+        } else {
+            echo 'No room pin provided';
+        }
+    }
+
+    public function get_image_path() {
+        // Example: Get the quest image path from a model or directly
+        $questId = $this->input->post('questId');
+
         $this->load->model('quiz_model');
-        
-        // Get a random question
-        $question = $this->quiz_model->get_question();
-        
-        if (!$question) {
-            // Handle case where no question is found
-            show_error('No questions found.');
-            return;
-        }
-        
-        $question_text = $question['question_text'];
-        $question_id = $question['id'];
-        $question_time = $question['time']; // Fetch the question's time
+        $questImage = $this->quiz_model->get_image_path($questId); // Fetch the image path
+
+        // Return the image path as JSON
+        echo json_encode(['imagePath' => $questImage]);
+    }
+
+    public function fetch_questions() {
+        $room_id = $this->input->post('room_id');
     
-        // Get answers for the question
-        $answers = $this->quiz_model->get_answers($question_id);
-        
-        if (!$answers) {
-            // Handle case where no answers are found for the question
-            show_error('No answers found for the question.');
+        if (!$room_id) {
+            echo json_encode(['status' => 'error', 'message' => 'Room ID is required']);
             return;
         }
-        
-        // Shuffle the answers array to randomize the order
-        shuffle($answers);
-                
-        // Find the correct answer
-        $correct_answer = null;
-        foreach ($answers as $answer) {
-            if (isset($answer['is_correct']) && $answer['is_correct']) {
-                $correct_answer = $answer['answer_text'];
-                break;
-            }
+    
+        $this->load->model('quiz_model');
+        $questions = $this->quiz_model->get_questions_by_room($room_id);
+    
+        if (!empty($questions)) {
+            echo json_encode(['status' => 'success', 'data' => $questions]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'No questions found for this room']);
         }
-        
-        // Prepare data for the view
-        $data = [
-            'question' => $question_text,
-            'question_id' => $question_id,
-            'time' => $question_time, // Include the question's time
-            'answers' => $answers, // Pass the shuffled answers
-            'correct_answer' => $correct_answer // Include the correct answer in the data
-        ];
-        
+    }
+    
+    public function fetch_answers() {
+        $question_id = $this->input->post('question_id');
+    
+        if (!$question_id) {
+            echo json_encode(['status' => 'error', 'message' => 'Question ID is required']);
+            return;
+        }
+    
+        $this->load->model('quiz_model');
+        $answers = $this->quiz_model->get_answers_by_question($question_id);
+    
+        if (!empty($answers)) {
+            echo json_encode(['status' => 'success', 'data' => $answers]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'No answers found for this question']);
+        }
+    }
+    
+    public function start_game() {
         // Load the view with data
-        $this->load->view('player/quiz_view', $data);
+        $this->load->view('player/quiz_view');
     }
 
     public function start(){

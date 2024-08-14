@@ -65,16 +65,17 @@
         </div>        
         <div id="flash-messages"></div>
         <div id="room-info">
-            <h3 class="mb-3 text-center">Room PIN</h3>
+            <h4 class="mb-3 text-center">Room PIN</h4>
             <div class="form-group">
                 <input type="text" class="form-control text-center form-control-lg" id="room-pin" value="<?php echo $this->session->userdata('room_pin'); ?>" readonly>
             </div>
-            <h3 class="mb-3 text-center">Players</h3>
+            <br>
+            <h4 class="mb-3 text-center">Players</h4>
             <div class="centered-container mt-4">
                 <div class="players-box">
                     <div id="players-container" class="players-container"></div>
                 </div>
-                <h3 class="mt-2">Waiting for the host to start the game.</h3>
+                <h4 class="mt-2">Waiting for the host to start the game.</h4>
                 <a style="font-weight: 700;" id="left-room" href="<?php echo site_url('main_controller/leftroom') ?>" class="btn btn-light">Leave Room</a>
             </div>
         </div>
@@ -85,6 +86,29 @@
         // Get the room pin and player name
         const roomPin = document.getElementById('room-pin').value;
         const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
+        
+        // Variable to store room_id
+        let roomId;
+
+        // Function to fetch room ID from the server
+        function fetchRoomId(roomPin) {
+            return $.ajax({
+                url: '<?= site_url('main_controller/fetch_room_id') ?>',
+                type: 'POST',
+                data: { roomPin: roomPin },
+                success: function(response) {
+                    if (response !== 'Room ID not found' && response !== 'No room pin provided') {
+                        roomId = response; // Store the room_id in the variable
+                        console.log('Room ID:', roomId); // Log the room ID for debugging
+                    } else {
+                        console.error(response); // Handle errors or missing room ID
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error);
+                }
+            });
+        }
 
         // WebSocket URL, adjust as necessary
         const socketUrl = `ws://${window.location.hostname}:3000`;
@@ -97,7 +121,7 @@
         socket.onopen = function() {
             console.log('WebSocket connection established.');
             isSocketOpen = true;
-            sendJoinRoomRequest();
+            fetchRoomId(roomPin); // Fetch room ID when WebSocket opens
         };
 
         // Handle WebSocket message event
@@ -153,8 +177,8 @@
 
         // Send request to join room
         function sendJoinRoomRequest() {
-            if (isSocketOpen) {
-                const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName });
+            if (isSocketOpen && roomId) {
+                const joinMessage = JSON.stringify({ type: 'joinRoom', pin: roomPin, playerName: playerName, roomId: roomId });
                 socket.send(joinMessage);
             }
         }
@@ -176,7 +200,7 @@
         // Handle room status updates
         function handleRoomStatus(message) {
             if (message.hasStarted === 1 && message.isValid === 0) {
-                window.location.href = `<?php echo site_url('/start_game'); ?>?roomPin=${roomPin}`;
+                window.location.href = `<?php echo site_url('/start_game'); ?>?roomId=${roomId}`;
             } else if (message.isValid === 0 && !alertShown) {
                 Swal.fire({
                     title: "Room is not available.",
@@ -194,12 +218,12 @@
             }
         }
 
-        // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
-        setInterval(function() {
-            if (!isSocketOpen) {
-                console.error('WebSocket is not open. Polling might be needed.');
-            }
-        }, 500);
-    </script>
+    // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
+    setInterval(function() {
+        if (!isSocketOpen) {
+            console.error('WebSocket is not open. Polling might be needed.');
+        }
+    }, 500);
+</script>
 </body>
 </html>

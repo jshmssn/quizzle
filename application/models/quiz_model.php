@@ -148,27 +148,67 @@ class quiz_model extends CI_Model {
         return isset($result['isValid']) ? $result['isValid'] : null;
     }
 
-    // Fetch a question and its answers
-    public function get_question() {
-        $this->db->order_by('id');
-        $this->db->limit(1);
-        $query = $this->db->get('questions');
+    // Fetch a players
+    public function get_players() {
+        $this->db->select('name');
+        $query = $this->db->get('participants');
         return $query->row_array();
     }
 
-    // Fetch answers for a given question
-    public function get_answers($question_id) {
-        $this->db->where('question_id', $question_id);
-        $query = $this->db->get('answers');
+    // Fetch Room id by Room Pin
+    public function get_room_id_by_pin($roomPin) {
+        $this->db->select('room_id');
+        $this->db->from('rooms');
+        $this->db->where('pin', $roomPin);
+        $query = $this->db->get();
+
+        if ($query->num_rows() > 0) {
+            return $query->row()->room_id; // Return the room ID
+        } else {
+            return null; // No matching room pin found
+        }
+    }
+
+    // Fetch all question based on room_id
+    public function get_questions_by_room($room_id) {
+        $this->db->select('id, question_text, time ');
+        $this->db->where('room_id', $room_id);
+        $this->db->order_by('id', 'ASC');
+        $query = $this->db->get('questions');
         return $query->result_array();
     }
 
-    // Fetch the correct answer for a given question
-    public function get_correct_answer($question_id) {
+    // Fetch answers for a given question
+    public function get_answers_by_question($question_id) {
+        $this->db->select('id, answer_text, is_correct');
+        $this->db->where('question_id', $question_id);
+        $this->db->order_by('RAND()');
+        $query = $this->db->get('answers');
+        return $query->result_array();
+    }    
+
+    // Fetch answers for a given question
+    public function get_correct_answers($question_id) {
+        $this->db->select('answer_text');
         $this->db->where('question_id', $question_id);
         $this->db->where('is_correct', 1);
+        $this->db->order_by('id', 'ASC');
         $query = $this->db->get('answers');
-        return $query->row_array(); // Assuming there's only one correct answer
+        return $query->result_array();
+    }   
+
+    public function get_image_path($questId) {
+        // Example query to get the image path
+        $this->db->select('image_path');
+        $this->db->from('questions');
+        $this->db->where('id', $questId);
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            return $query->row()->image_path; // Return the image path
+        }
+        
+        return ''; // Return empty if no path found
     }
 }
 ?>
