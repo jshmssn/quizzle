@@ -192,7 +192,6 @@ class quiz_model extends CI_Model {
         $this->db->select('answer_text');
         $this->db->where('question_id', $question_id);
         $this->db->where('is_correct', 1);
-        $this->db->order_by('id', 'ASC');
         $query = $this->db->get('answers');
         return $query->result_array();
     }   

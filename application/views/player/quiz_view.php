@@ -270,11 +270,11 @@
         questionTextElement.textContent = question.question_text || 'Loading question...';
         questionNumberElement.textContent = `Question ${currentQuestionIndex + 1} out of ${questions.length}`;
         loadImage(question.id);
-        fetchAnswers(question.id, question.time);
+        fetchAnswers(question.id);
         startCountdown(question.time);
     }
 
-    async function fetchAnswers(questionId, questTime) {
+    async function fetchAnswers(questionId) {
         try {
             const response = await $.ajax({
                 url: '<?= site_url('main_controller/fetch_answers')?>',

@@ -245,7 +245,10 @@
                 e.preventDefault();
                 $('#confirmModal').modal('show');
             });
-            $('#submit-button').on('click', function(e) {
+        });
+
+        window.addEventListener('click', function() {
+            $('#submit-button').on(function(e) {
                 e.preventDefault();
                 $('#submitModal').modal('show');
             });
