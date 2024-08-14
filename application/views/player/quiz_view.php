@@ -207,237 +207,240 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        const overlay = document.getElementById('overlay');
-        const countdownTimer = document.getElementById('countdown-timer');
-        const questionTextElement = document.getElementById('question-text');
-        const answersElement = document.getElementById('answers');
-        const speakButton = document.getElementById('speak-button');
-        const questionNumberElement = document.getElementById('question-number');
-        const countdownBar = document.getElementById('countdown-bar');
-        const imageContainer = document.getElementById('image-container');
+    const overlay = document.getElementById('overlay');
+    const countdownTimer = document.getElementById('countdown-timer');
+    const questionTextElement = document.getElementById('question-text');
+    const answersElement = document.getElementById('answers');
+    const speakButton = document.getElementById('speak-button');
+    const questionNumberElement = document.getElementById('question-number');
+    const countdownBar = document.getElementById('countdown-bar');
+    const imageContainer = document.getElementById('image-container');
 
-        if (!roomId) {
-            console.error('Room id is required.');
-            return;
-        }
+    if (!roomId) {
+        console.error('Room id is required.');
+        return;
+    }
 
-        let countdown = 2;
-        const countdownInterval = setInterval(() => {
-            countdownTimer.textContent = countdown;
-            countdownTimer.style.opacity = 1;
-            countdown--;
-            if (countdown < 0) {
-                clearInterval(countdownInterval);
-                countdownTimer.style.opacity = 0;
-                setTimeout(() => {
-                    overlay.classList.add('hidden');
-                    fetchQuestions();
-                }, 1000);
-            }
-        }, 1000);
-
-        let totalQuestions = 0; // Initialize totalQuestions
-
-        async function fetchQuestions() {
-            try {
-                const response = await $.ajax({
-                    url: '<?= site_url('main_controller/fetch_questions')?>',
-                    type: 'POST',
-                    data: { room_id: roomId },
-                    dataType: 'json'
-                });
-                if (response.status === 'success') {
-                    totalQuestions = response.data.length; // Set totalQuestions
-                    console.log('Questions:', response.data);
-
-                    response.data.forEach((question, index) => {
-                        const questionId = question.id;
-                        const questionText = question.question_text;
-                        const questTime = question.time;
-                        const questImage =question.image_path;
-
-                        if (questionText) {
-                            questionTextElement.textContent = questionText;
-                        } else {
-                            console.error('Question text not found in response.');
-                        }
-
-                        console.log(questImage);
-                        // Update the question number display
-                        questionNumberElement.textContent = `Question ${index + 1} out of ${totalQuestions}`;
-
-                        fetchAnswers(questionId, questTime, totalQuestions); // Pass totalQuestions to fetchAnswers
-                        fetchCorrectAnswers(questionId);
-                        loadImage(questionId);
-                    });
-                } else {
-                    console.error('Error:', response.message);
-                }
-            } catch (error) {
-                console.error('AJAX error:', error);
-            }
-        }
-
-        async function fetchAnswers(questionId, questTime, totalQuestions) {
-            try {
-                const response = await $.ajax({
-                    url: '<?= site_url('main_controller/fetch_answers')?>',
-                    type: 'POST',
-                    data: { question_id: questionId },
-                    dataType: 'json'
-                });
-                if (response.status === 'success') {
-                    console.log('Answers:', response.data);
-
-                    answersElement.innerHTML = '';
-
-                    response.data.forEach(answer => {
-                        const answerButton = document.createElement('button');
-                        answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
-                        answerButton.textContent = answer.answer_text;
-
-                        answerButton.addEventListener('click', function() {
-                            handleAnswerSelection(answerButton, answer.id, questionId);
-                        });
-
-                        answersElement.appendChild(answerButton);
-                    });
-
-                    startCountdown(questTime);
-
-                } else {
-                    console.error('Error:', response.message);
-                }
-            } catch (error) {
-                console.error('AJAX error:', error);
-            }
-        }
-
-        async function fetchCorrectAnswers(questionId) {
-            try {
-                const response = await $.ajax({
-                    url: '<?= site_url('main_controller/fetch_correct_answers')?>',
-                    type: 'POST',
-                    data: { question_id: questionId },
-                    dataType: 'json'
-                });
-
-                if (response.status === 'success') {
-                    console.log('Correct Answer:', response.data);
-
-                    const correctAnswer = document.getElementById('correctAnswer');
-                    if (correctAnswer) {
-                        correctAnswer.innerHTML = ''; // Clear any previous content
-
-                        // Assuming response.data is an array of correct answers
-                        response.data.forEach(answer => {
-                            const answerText = answer.answer_text; // Adjust this if your data structure is different
-                            correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
-                        });
-                    } else {
-                        console.error('Element with id "correctAnswer" not found.');
-                    }
-
-                } else {
-                    console.error('Error:', response.message);
-                }
-            } catch (error) {
-                console.error('AJAX error:', error);
-            }
-        }
-
-        function startCountdown(duration) {
-            let timeLeft = duration;
-            const countdownBar = document.querySelector('.countdown-bar');
-            
-            // Update the countdown bar width and display the remaining time
-            const countdownInterval = setInterval(() => {
-                // Calculate the percentage width for the countdown bar
-                const width = (timeLeft / duration) * 100 + '%';
-                countdownBar.style.width = width;
-                
-                // Decrease the time left
-                timeLeft--;
-                
-                // If time is up
-                if (timeLeft < 0) {            
-                    clearInterval(countdownInterval);
-                    showAnswer();
-                }
+    let countdown = 2;
+    const countdownInterval = setInterval(() => {
+        countdownTimer.textContent = countdown;
+        countdownTimer.style.opacity = 1;
+        countdown--;
+        if (countdown < 0) {
+            clearInterval(countdownInterval);
+            countdownTimer.style.opacity = 0;
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                fetchQuestions();
             }, 1000);
         }
+    }, 1000);
 
-        function showAnswer(){
-            // Show waiting message and hide correct answer
-            const waitingMessage = document.getElementById('waitingMessage');
-                const correctAnswer = document.getElementById('correctAnswer');
-                const answerButtons = document.querySelectorAll('.btn.answer-btn');
-
-                waitingMessage.style.display = 'none';
-                correctAnswer.style.display = 'block';
-                correctAnswer.removeAttribute('hidden');
-
-            answerButtons.forEach(btn => {
-                btn.classList.add('disabled');
-                btn.disabled = true;
-            });
-        }
-        function loadImage(questId) {
-            $.ajax({
-                url: '<?= site_url('main_controller/get_image_path') ?>',
+    let questions = [];
+    let currentQuestionIndex = 0;
+    
+    async function fetchQuestions() {
+        try {
+            const response = await $.ajax({
+                url: '<?= site_url('main_controller/fetch_questions')?>',
                 type: 'POST',
-                dataType: 'json',
-                data: { questId: questId },
-                success: function(response) {
-                    if (response.imagePath) {
-                        // Set the image source
-                        $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
-                    } else {
-                        // Handle case where no image path is returned
-                        $('.image-container img').attr('src', ''); // Clear the image source
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
+                data: { room_id: roomId },
+                dataType: 'json'
+            });
+            if (response.status === 'success') {
+                questions = response.data;
+                console.log('Questions:', questions);
+
+                if (questions.length > 0) {
+                    displayQuestion(questions[currentQuestionIndex]);
+                } else {
+                    console.error('No questions found.');
                 }
-            });
-        }
-
-        function handleAnswerSelection(button, answerId, questionId) {
-            const answerButtons = document.querySelectorAll('.btn.answer-btn');
-            const waitingMessage = document.getElementById('waitingMessage');
-
-            answerButtons.forEach(btn => {
-                btn.classList.add('disabled');
-                btn.disabled = true;
-                waitingMessage.removeAttribute('hidden');
-                waitingMessage.style.display = 'block';
-            });
-
-            button.classList.remove('disabled');
-            button.classList.add('selected');
-
-
-            if (isSocketOpen) {
-                const data = {
-                    type: 'answer_selected',
-                    answerId: answerId,
-                    questionId: questionId,
-                    roomId: roomId
-                };
-                socket.send(JSON.stringify(data));
-                console.log('Selected answer data sent via WebSocket:', data);
             } else {
-                console.error('Socket connection is not open.');
+                console.error('Error:', response.message);
             }
+        } catch (error) {
+            console.error('AJAX error:', error);
         }
+    }
 
-        speakButton.addEventListener('click', () => {
-            const questionText = questionTextElement.textContent;
-            const speech = new SpeechSynthesisUtterance(questionText);
-            speechSynthesis.speak(speech);
+    function displayQuestion(question) {
+        if (!question) return;
+
+        questionTextElement.textContent = question.question_text || 'Loading question...';
+        questionNumberElement.textContent = `Question ${currentQuestionIndex + 1} out of ${questions.length}`;
+        loadImage(question.id);
+        fetchAnswers(question.id, question.time);
+        startCountdown(question.time);
+    }
+
+    async function fetchAnswers(questionId, questTime) {
+        try {
+            const response = await $.ajax({
+                url: '<?= site_url('main_controller/fetch_answers')?>',
+                type: 'POST',
+                data: { question_id: questionId },
+                dataType: 'json'
+            });
+            if (response.status === 'success') {
+                console.log('Answers:', response.data);
+
+                answersElement.innerHTML = '';
+
+                response.data.forEach(answer => {
+                    const answerButton = document.createElement('button');
+                    answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
+                    answerButton.textContent = answer.answer_text;
+
+                    answerButton.addEventListener('click', function() {
+                        handleAnswerSelection(answerButton, answer.id, questionId);
+                    });
+
+                    answersElement.appendChild(answerButton);
+                });
+            } else {
+                console.error('Error:', response.message);
+            }
+        } catch (error) {
+            console.error('AJAX error:', error);
+        }
+    }
+
+    async function fetchCorrectAnswers(questionId) {
+        try {
+            const response = await $.ajax({
+                url: '<?= site_url('main_controller/fetch_correct_answers')?>',
+                type: 'POST',
+                data: { question_id: questionId },
+                dataType: 'json'
+            });
+
+            if (response.status === 'success') {
+                console.log('Correct Answer:', response.data);
+
+                const correctAnswer = document.getElementById('correctAnswer');
+                if (correctAnswer) {
+                    correctAnswer.innerHTML = ''; // Clear any previous content
+
+                    response.data.forEach(answer => {
+                        const answerText = answer.answer_text; // Adjust this if your data structure is different
+                        correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
+                    });
+                } else {
+                    console.error('Element with id "correctAnswer" not found.');
+                }
+
+            } else {
+                console.error('Error:', response.message);
+            }
+        } catch (error) {
+            console.error('AJAX error:', error);
+        }
+    }
+
+    function startCountdown(duration) {
+        let timeLeft = duration;
+        const countdownBar = document.querySelector('.countdown-bar');
+        
+        // Update the countdown bar width and display the remaining time
+        const countdownInterval = setInterval(() => {
+            // Calculate the percentage width for the countdown bar
+            const width = (timeLeft / duration) * 100 + '%';
+            countdownBar.style.width = width;
+            
+            // Decrease the time left
+            timeLeft--;
+            
+            // If time is up
+            if (timeLeft < 0) {            
+                clearInterval(countdownInterval);
+                showAnswer();
+            }
+        }, 1000);
+    }
+
+    function showAnswer(){
+        // Show waiting message and hide correct answer
+        const waitingMessage = document.getElementById('waitingMessage');
+        const correctAnswer = document.getElementById('correctAnswer');
+        const answerButtons = document.querySelectorAll('.btn.answer-btn');
+
+        waitingMessage.style.display = 'none';
+        correctAnswer.style.display = 'block';
+        correctAnswer.removeAttribute('hidden');
+
+        answerButtons.forEach(btn => {
+            btn.classList.add('disabled');
+            btn.disabled = true;
         });
+
+        // Move to the next question after a delay
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion(questions[currentQuestionIndex]);
+            } else {
+                // Handle the end of the quiz
+                console.log('Quiz completed!');
+            }
+        }, 5000); // Delay to show the correct answer before moving to the next question
+    }
+    
+    function loadImage(questId) {
+        $.ajax({
+            url: '<?= site_url('main_controller/get_image_path') ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { questId: questId },
+            success: function(response) {
+                if (response.imagePath) {
+                    // Set the image source
+                    $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
+                } else {
+                    // Handle case where no image path is returned
+                    $('.image-container img').attr('src', ''); // Clear the image source
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+            }
+        });
+    }
+
+    function handleAnswerSelection(button, answerId, questionId) {
+        const answerButtons = document.querySelectorAll('.btn.answer-btn');
+        const waitingMessage = document.getElementById('waitingMessage');
+
+        answerButtons.forEach(btn => {
+            btn.classList.add('disabled');
+            btn.disabled = true;
+            waitingMessage.removeAttribute('hidden');
+            waitingMessage.style.display = 'block';
+        });
+
+        button.classList.remove('disabled');
+        button.classList.add('selected');
+
+        if (isSocketOpen) {
+            const data = {
+                type: 'answer_selected',
+                answerId: answerId,
+                questionId: questionId,
+                roomId: roomId
+            };
+            socket.send(JSON.stringify(data));
+            console.log('Selected answer data sent via WebSocket:', data);
+        } else {
+            console.error('Socket connection is not open.');
+        }
+    }
+
+    speakButton.addEventListener('click', () => {
+        const questionText = questionTextElement.textContent;
+        const speech = new SpeechSynthesisUtterance(questionText);
+        speechSynthesis.speak(speech);
     });
+});
 
 </script>
 </body>
