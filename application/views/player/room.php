@@ -97,7 +97,7 @@
                 type: 'POST',
                 data: { roomPin: roomPin },
                 success: function(response) {
-                    if (response !== 'Room ID not found' && response !== 'No room pin provided') {
+                    if (response !== 'Room ID not found' && response !== 'No room id provided') {
                         roomId = response; // Store the room_id in the variable
                         console.log('Room ID:', roomId); // Log the room ID for debugging
                     } else {
@@ -121,7 +121,9 @@
         socket.onopen = function() {
             console.log('WebSocket connection established.');
             isSocketOpen = true;
-            fetchRoomId(roomPin); // Fetch room ID when WebSocket opens
+            fetchRoomId(roomPin).then(() => {
+                sendJoinRoomRequest(); // Send the join room request after fetching roomId
+            });
         };
 
         // Handle WebSocket message event
