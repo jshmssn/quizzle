@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" integrity="sha384-rOA1PnstxnOBLzCLMcre8ybwbTmemjzdNlILg8O7z1lUkLXozs4DHonlDtnE7fpc" crossorigin="anonymous"></script>
+    <!-- Sweetalert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="<?= base_url('assets/scripts/preventInspect.js')?>"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
@@ -96,6 +98,7 @@
         .image-container img {
             max-width: 100%; /* Ensure responsiveness */
             height: auto; /* Maintain aspect ratio */
+            border-radius: 10px;
         }
         .countdown-bar {
             width: 100%;
@@ -170,6 +173,10 @@
             <div id="answers">
                 <!-- Answer buttons will be dynamically inserted here -->
             </div>
+            <div id="fill-in-the-blank" hidden>
+                <input type="text" id="answer-input" class="form-control" placeholder="Type your answer here...">
+                <button id="submit-answer" class="btn btn-primary btn-block mt-2">Submit</button>
+            </div>
         </div>
     </div>
 </div>
@@ -214,7 +221,9 @@
     const speakButton = document.getElementById('speak-button');
     const questionNumberElement = document.getElementById('question-number');
     const countdownBar = document.getElementById('countdown-bar');
-    const imageContainer = document.getElementById('image-container');
+    const fillInTheBlankContainer = document.getElementById('fill-in-the-blank');
+    const answerInput = document.getElementById('answer-input');
+    const submitAnswerButton = document.getElementById('submit-answer');
 
     if (!roomId) {
         console.error('Room id is required.');
@@ -226,7 +235,7 @@
         countdownTimer.textContent = countdown;
         countdownTimer.style.opacity = 1;
         countdown--;
-        if (countdown < 0) {
+        if (countdown < 1) {
             clearInterval(countdownInterval);
             countdownTimer.style.opacity = 0;
             setTimeout(() => {
@@ -238,7 +247,7 @@
 
     let questions = [];
     let currentQuestionIndex = 0;
-    
+
     async function fetchQuestions() {
         try {
             const response = await $.ajax({
@@ -249,8 +258,6 @@
             });
             if (response.status === 'success') {
                 questions = response.data;
-                console.log('Questions:', questions);
-
                 if (questions.length > 0) {
                     displayQuestion(questions[currentQuestionIndex]);
                 } else {
@@ -264,14 +271,59 @@
         }
     }
 
+    // Function to display a question
     function displayQuestion(question) {
         if (!question) return;
 
+        // console.log('Question Data:', question); // Debugging line
+
+        // Display question text and number
         questionTextElement.textContent = question.question_text || 'Loading question...';
         questionNumberElement.textContent = `Question ${currentQuestionIndex + 1} out of ${questions.length}`;
+        
+        // Show image and fetch answers if necessary
         loadImage(question.id);
         fetchAnswers(question.id);
+        fetchCorrectAnswers(question.id);
         startCountdown(question.time);
+
+        // Ensure submitAnswerButton is enabled for the new question
+        submitAnswerButton.removeAttribute('disabled');
+
+        // Handle display based on question type
+        if (question.isFill === '1') {
+            answersElement.style.display = 'none';
+            fillInTheBlankContainer.removeAttribute('hidden');
+            fillInTheBlankContainer.style.display = 'block'; // Ensure it is visible
+            submitAnswerButton.removeEventListener('click', handleFillInTheBlankAnswer); // Remove previous handlers if any
+            submitAnswerButton.addEventListener('click', () => handleFillInTheBlankAnswer(answerInput.value, question.id));
+        } else {
+            fillInTheBlankContainer.style.display = 'none'; // Hide fill-in-the-blank section
+            answersElement.style.display = 'flex';
+        }
+    }
+
+    function handleFillInTheBlankAnswer(answerText, questionId) {
+        const waitingMessage = document.getElementById('waitingMessage');
+        waitingMessage.removeAttribute('hidden');
+        waitingMessage.style.display = 'block';
+
+        if (isSocketOpen) {
+            const data = {
+                type: 'answer_selected',
+                answerText: answerText,
+                questionId: questionId,
+                roomId: roomId
+            };
+            socket.send(JSON.stringify(data));
+            console.log('Selected answer data sent via WebSocket:', data);
+        } else {
+            console.error('Socket connection is not open.');
+        }
+
+        answerInput.value = '';
+        fillInTheBlankContainer.setAttribute('hidden', 'true');
+        waitingMessage.style.display = 'block';
     }
 
     async function fetchAnswers(questionId) {
@@ -283,7 +335,7 @@
                 dataType: 'json'
             });
             if (response.status === 'success') {
-                console.log('Answers:', response.data);
+                // console.log('Answers:', response.data);
 
                 answersElement.innerHTML = '';
 
@@ -321,9 +373,10 @@
                 const correctAnswer = document.getElementById('correctAnswer');
                 if (correctAnswer) {
                     correctAnswer.innerHTML = ''; // Clear any previous content
-
+                    
                     response.data.forEach(answer => {
                         const answerText = answer.answer_text; // Adjust this if your data structure is different
+                        console.log(answer.answer_text);
                         correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
                     });
                 } else {
@@ -352,23 +405,25 @@
             timeLeft--;
             
             // If time is up
-            if (timeLeft < 0) {            
+            if (timeLeft < -1) {            
                 clearInterval(countdownInterval);
+                submitAnswerButton.setAttribute('disabled', 'true');
                 showAnswer();
             }
         }, 1000);
     }
 
-    function showAnswer(){
-        // Show waiting message and hide correct answer
+    function showAnswer() {
         const waitingMessage = document.getElementById('waitingMessage');
         const correctAnswer = document.getElementById('correctAnswer');
         const answerButtons = document.querySelectorAll('.btn.answer-btn');
 
+        // Hide the waiting message and show the correct answer
         waitingMessage.style.display = 'none';
         correctAnswer.style.display = 'block';
         correctAnswer.removeAttribute('hidden');
 
+        // Disable answer buttons
         answerButtons.forEach(btn => {
             btn.classList.add('disabled');
             btn.disabled = true;
@@ -376,15 +431,30 @@
 
         // Move to the next question after a delay
         setTimeout(() => {
+            // Hide the correct answer before moving to the next question
+            correctAnswer.style.display = 'none';
+            
             currentQuestionIndex++;
             if (currentQuestionIndex < questions.length) {
                 displayQuestion(questions[currentQuestionIndex]);
             } else {
                 // Handle the end of the quiz
-                console.log('Quiz completed!');
+                // console.log('Quiz completed!');
+                Swal.fire({
+                    title: "Good job!",
+                    text: "The quiz is now done.",
+                    icon: "success",
+                    confirmButtonText: "Go to ranking"
+                }).then((result) => {
+                    /* Read more about isConfirmed */
+                    if (result.isConfirmed) {
+                        
+                    }
+                });
             }
-        }, 5000); // Delay to show the correct answer before moving to the next question
+        }, 3000); // Delay to show the correct answer before moving to the next question
     }
+
     
     function loadImage(questId) {
         $.ajax({

@@ -171,7 +171,7 @@ class quiz_model extends CI_Model {
 
     // Fetch all question based on room_id
     public function get_questions_by_room($room_id) {
-        $this->db->select('id, question_text, time ');
+        $this->db->select('id, question_text, time, isFill');
         $this->db->where('room_id', $room_id);
         $this->db->order_by('id', 'ASC');
         $query = $this->db->get('questions');
@@ -180,7 +180,7 @@ class quiz_model extends CI_Model {
 
     // Fetch answers for a given question
     public function get_answers_by_question($question_id) {
-        $this->db->select('id, answer_text, is_correct');
+        $this->db->select('id, answer_text');
         $this->db->where('question_id', $question_id);
         $this->db->order_by('RAND()');
         $query = $this->db->get('answers');
