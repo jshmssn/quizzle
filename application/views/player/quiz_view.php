@@ -16,10 +16,6 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
     <style>
-        body {
-            font-family: 'Press Start 2P', cursive;
-            background-color: #f8f9fa;
-        }
         .overlay {
             position: fixed;
             top: 0;
@@ -124,6 +120,9 @@
                 font-size: 0.9rem;
             }
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -209,9 +208,29 @@
         isSocketOpen = true;
     };
 
+    // Handle WebSocket close event
+    socket.onclose = function() {
+        console.log('WebSocket connection closed.');
+        isSocketOpen = false;
+        // Attempt to reconnect
+        setTimeout(() => {
+            if (!isSocketOpen) {
+                location.reload(); // Reload the page to attempt reconnection
+            }
+        }, 3000); // Adjust the delay as necessary
+    };
+
     socket.onerror = function(error) {
         console.error('WebSocket Error:', error);
     };
+
+    // Send request to join room
+    function sendJoinRoomRequest() {
+        if (isSocketOpen && roomId) {
+            const joinMessage = JSON.stringify({ type: 'quizStart', pin: roomPin, playerName: playerName, roomId: roomId });
+            socket.send(joinMessage);
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('overlay');
@@ -368,7 +387,7 @@
             });
 
             if (response.status === 'success') {
-                console.log('Correct Answer:', response.data);
+                // console.log('Correct Answer:', response.data);
 
                 const correctAnswer = document.getElementById('correctAnswer');
                 if (correctAnswer) {
@@ -393,24 +412,45 @@
 
     function startCountdown(duration) {
         let timeLeft = duration;
+
+        // Retrieve the remaining time from localStorage if it exists
+        const storedTime = localStorage.getItem('countdownTime');
+        if (storedTime) {
+            timeLeft = parseInt(storedTime, 10);
+            localStorage.removeItem('countdownTime'); // Remove the stored time after use
+        }
+
         const countdownBar = document.querySelector('.countdown-bar');
-        
-        // Update the countdown bar width and display the remaining time
-        const countdownInterval = setInterval(() => {
-            // Calculate the percentage width for the countdown bar
+        const submitAnswerButton = document.getElementById('submit-answer'); // Ensure you have this element
+
+        // Function to update the countdown bar width and remaining time display
+        function updateCountdown() {
             const width = (timeLeft / duration) * 100 + '%';
             countdownBar.style.width = width;
+            // Optionally update a display element with timeLeft here
+        }
+
+        // Start the countdown
+        const countdownInterval = setInterval(() => {
+            updateCountdown();
+            
+            // Save the remaining time to localStorage
+            localStorage.setItem('countdownTime', timeLeft);
             
             // Decrease the time left
             timeLeft--;
             
             // If time is up
-            if (timeLeft < -1) {            
+            if (timeLeft < 0) {
                 clearInterval(countdownInterval);
                 submitAnswerButton.setAttribute('disabled', 'true');
                 showAnswer();
+                localStorage.removeItem('countdownTime'); // Clear the stored time
             }
         }, 1000);
+
+        // Initial update of the countdown bar
+        updateCountdown();
     }
 
     function showAnswer() {
@@ -464,11 +504,13 @@
             data: { questId: questId },
             success: function(response) {
                 if (response.imagePath) {
-                    // Set the image source
+                    // Set the image source and show the image container
                     $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
+                    $('.image-container').removeClass('hidden');
                 } else {
-                    // Handle case where no image path is returned
-                    $('.image-container img').attr('src', ''); // Clear the image source
+                    // Clear the image source and hide the image container
+                    $('.image-container img').attr('src', '');
+                    $('.image-container').addClass('hidden');
                 }
             },
             error: function(xhr, status, error) {

@@ -2,19 +2,19 @@
 body {
     background-color: #ffffff;
     color: #000000;
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Press Start 2P';
 }
 .container {
     margin-top: 50px;
 }
 .btn {
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Press Start 2P';
     margin: 10px;
     background-color: #cc0000;
     color: #fff;
 }
 .btn:hover {
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Press Start 2P';
     margin: 10px;
     background-color: #c3c3c3;
     color: #000000;
