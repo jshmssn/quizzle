@@ -192,9 +192,10 @@
 <!-- WebSocket and AJAX Script -->
 <script>
     const socketUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:3000`;
-    const socket = new WebSocket(socketUrl);
-
+    let socket = null;
     let isSocketOpen = false;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5; // Adjust as needed
 
     function getRoomId() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -203,36 +204,34 @@
 
     let roomId = getRoomId();
 
-    socket.onopen = function() {
-        console.log('WebSocket connection established.');
-        isSocketOpen = true;
-    };
+    function connectWebSocket() {
+        socket = new WebSocket(socketUrl);
 
-    // Handle WebSocket close event
-    socket.onclose = function() {
-        console.log('WebSocket connection closed.');
-        isSocketOpen = false;
-        // Attempt to reconnect
-        setTimeout(() => {
-            if (!isSocketOpen) {
-                location.reload(); // Reload the page to attempt reconnection
+        socket.onopen = function() {
+            console.log('WebSocket connection established.');
+            isSocketOpen = true;
+            reconnectAttempts = 0; // Reset attempts on successful connection
+        };
+
+        socket.onclose = function() {
+            console.log('WebSocket connection closed.');
+            isSocketOpen = false;
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 3000); // Attempt to reconnect after 3 seconds
+            } else {
+                console.error('Max reconnect attempts reached. Please refresh the page.');
             }
-        }, 3000); // Adjust the delay as necessary
-    };
+        };
 
-    socket.onerror = function(error) {
-        console.error('WebSocket Error:', error);
-    };
-
-    // Send request to join room
-    function sendJoinRoomRequest() {
-        if (isSocketOpen && roomId) {
-            const joinMessage = JSON.stringify({ type: 'quizStart', pin: roomPin, playerName: playerName, roomId: roomId });
-            socket.send(joinMessage);
-        }
+        socket.onerror = function(error) {
+            console.error('WebSocket Error:', error);
+        };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+    connectWebSocket();
+
     const overlay = document.getElementById('overlay');
     const countdownTimer = document.getElementById('countdown-timer');
     const questionTextElement = document.getElementById('question-text');
