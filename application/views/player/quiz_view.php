@@ -248,20 +248,27 @@
             return;
         }
 
-        let countdown = 2;
+        let countdown = 5;
         const countdownInterval = setInterval(() => {
-            countdownTimer.textContent = countdown;
-            countdownTimer.style.opacity = 1;
+            if (countdown > 0) {
+                countdownTimer.textContent = countdown;
+            }
+
             countdown--;
-            if (countdown < 1) {
+
+            if (countdown < 0) {
                 clearInterval(countdownInterval);
-                countdownTimer.style.opacity = 0;
+
+                overlay.style.transition = "opacity 1s ease-out";
+                overlay.style.opacity = 0;
+
                 setTimeout(() => {
                     overlay.classList.add('hidden');
                     fetchQuestions();
                 }, 1000);
             }
         }, 1000);
+
 
         let questions = [];
         let currentQuestionIndex = 0;
@@ -394,7 +401,7 @@
                         
                         response.data.forEach(answer => {
                             const answerText = answer.answer_text; // Adjust this if your data structure is different
-                            console.log(answer.answer_text);
+                            // console.log(answer.answer_text);
                             correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
                         });
                     } else {
