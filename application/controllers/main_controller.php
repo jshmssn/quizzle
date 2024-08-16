@@ -120,6 +120,42 @@ class main_controller extends CI_Controller {
     
         redirect('room/host/' . $pin);
     }    
+
+    
+    public function submit_answer() {
+        $roomId = $this->input->post('room_id');
+        $questionId = $this->input->post('question_id');
+        $answerId = $this->input->post('answer_id');
+       
+        $player_name = $this->session->userdata('player_name');
+        $room_pin = $this->session->userdata('room_pin');
+        
+       // Get participant data
+        $participantData = $this->quiz_model->getparticipantdata($player_name, $room_pin);
+
+        // Debug output to understand the structure of $participantData
+        echo '<pre>';
+        print_r($participantData);
+        echo '</pre>';
+
+        // Assuming getparticipantdata returns an associative array with 'id' as one of the keys
+        if (isset($participantData['id'])) {
+            $participantId = $participantData['id'];
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Participant ID is missing.']);
+            return;
+        }
+
+        // Calculate the score
+        $this->load->model('quiz_model');
+        $score = $this->quiz_model->calculate_score($participantId, $roomId);
+        // Save the score
+        $this->quiz_model->save_score($participantId, $roomId, $score);
+        
+        echo json_encode(['status' => 'success', 'score' => $score]);
+    }
+    
+    
     
     public function hostgame() {
         $roomPin = $this->session->userdata('room_pin');
@@ -144,6 +180,33 @@ class main_controller extends CI_Controller {
         }
     }
 
+    
+    public function view_score($participant_id, $room_id) {
+        // Load the model
+        $this->load->model('quiz_model');
+    
+        // Get total score
+        $total_score = $this->quiz_model->get_total_score($participant_id, $room_id);
+    
+        // Pass the score data to the view
+        $data['total_score'] = $total_score;
+        $this->load->view('view_score', $data);
+    }
+
+  
+
+    public function save_score() {
+        $this->load->quiz_model('quiz_model'); // Load your model
+        $participant_id = $this->session->userdata('participant_id');
+        $score = $this->input->post('score');
+        $question_id = $this->input->post('question_id');
+    
+        // Save the score to the database
+        $this->quiz_model->save_score($participant_id, $score, $question_id);
+    }
+
+    
+    
     public function join() {
         // Get form data
         $name = $this->input->post('name');
@@ -238,6 +301,38 @@ class main_controller extends CI_Controller {
         redirect(base_url());
     }
 
+
+
+
+    /*
+    public function calculate_score() {
+        $roomId = $this->input->post('room_id');
+        $userId = $this->session->userdata('participant_id'); // or however you identify the user
+
+        // Fetch all answers submitted by the user for this room
+        $this->load->model('quiz_model');
+        $userAnswers = $this->quiz_model->get_user_answers($roomId, $userId);
+
+        // Fetch correct answers
+        $correctAnswers = $this->quiz_model->get_correct_answers($roomId);
+
+        $score = 0;
+
+        foreach ($userAnswers as $answer) {
+            if (isset($correctAnswers[$answer->question_id]) &&
+                $answer->answer_id == $correctAnswers[$answer->question_id]) {
+                $score += 10; 
+            }
+        }
+
+        // Save or return the score
+        $this->quiz_model->update_total_score($userId, $roomId, $score);
+
+        echo json_encode(['status' => 'success', 'score' => $score]);
+    }
+    */
+    
+
     public function get_room_status() {
         // Retrieve the room PIN from the query parameters
         $roomPin = $this->input->get('pin');
@@ -311,7 +406,30 @@ class main_controller extends CI_Controller {
             echo json_encode(['status' => 'error', 'message' => 'No questions found for this room']);
         }
     }
+    public function fetch_scores() {
+        $this->load->model('quiz_model'); // Load your model
+        $question_id = $this->input->post('question_id');
     
+        // Retrieve the scores from the database
+        $scores = $this->quiz_model->get_scores($question_id);
+        echo json_encode($scores);
+    }
+
+    public function fetch_user_score() {
+        $userId = $this->session->userdata('participant_id'); // Adjust as needed
+        $room_id = $this->input->post('room_id');
+    
+        $this->load->model('quiz_model');
+        $score = $this->quiz_model->get_user_score($userId, $room_id);
+    
+        if ($score !== null) {
+            echo json_encode(['status' => 'success', 'score' => $score]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Score not found.']);
+        }
+    }
+    
+
     public function fetch_answers() {
         $question_id = $this->input->post('question_id');
     
@@ -406,5 +524,7 @@ class main_controller extends CI_Controller {
     }
     
 }
+
+    
 
 ?>

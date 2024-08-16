@@ -7,6 +7,7 @@ class quiz_model extends CI_Model {
         $this->load->database();
     }
 
+
     public function save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath) {
         // Insert the question
         $data = array(
@@ -36,7 +37,120 @@ class quiz_model extends CI_Model {
     
         return false;
     }
+
+ 
+    // SCORING
+    public function save_score($participantId, $roomId, $score) {
+        $data = array(
+            'participant_id' => $participantId,
+            'room_id' => $roomId,
+            'score' => $score,
+            'created_at' => date('Y-m-d H:i:s')
+        );
     
+        $this->db->Insert('participant_scores', $data);
+    }
+    
+    public function calculate_score($participantId, $roomId) {
+        // Fetch all answers submitted by the participant for this room
+        $this->db->select('question_id, answer_id');
+        $this->db->from('participant_answers'); // Assuming you have a table tracking user answers
+        $this->db->where('room_id', $roomId);
+        $this->db->where('user_id', $participantId);
+        $userAnswers = $this->db->get()->result();
+    
+        $score = 0;
+    
+        // Check each answer
+        foreach ($userAnswers as $answer) {
+            // Fetch the correct answer for the question
+            $this->db->select('answer_id');
+            $this->db->from('answers');
+            $this->db->where('question_id', $answer->question_id);
+            $this->db->where('is_correct', 1); // Assuming isCorrect is a flag for correct answers
+            $correctAnswer = $this->db->get()->row();
+    
+            if ($correctAnswer && $answer->answer_id == $correctAnswer->answer_id) {
+                $score += 10; // Or however you want to score correct answers
+            }
+        }
+    
+        return $score;
+    }
+    
+    
+    
+    public function get_question_score($userId, $roomId, $questionId) {
+        $this->db->select('score');
+        $this->db->from('participant_question_scores');
+        $this->db->where('user_id', $userId);
+        $this->db->where('room_id', $roomId);
+        $this->db->where('question_id', $questionId);
+        $query = $this->db->get();
+        $result = $query->row();
+        return $result ? $result->score : 0;
+    }
+
+    public function get_user_score($participantId, $roomId) {
+        $this->db->select('score');
+        $this->db->from('participant_scores');
+        $this->db->where('participant_id', $participantId);
+        $this->db->where('room_id', $roomId);
+        $query = $this->db->get();
+    
+        if ($query->num_rows() > 0) {
+            return $query->row()->score;
+        } else {
+            return 0;
+        }
+    }
+    
+
+    public function get_scores($question_id) {
+        // Fetch scores based on question_id
+        $this->db->select('participant_scores.participant_id, participant_scores.room_id, scores.question_id, scores.answer_id, scores.response_time, scores.created_at, participants.name as participant_name, rooms.room_id as room_name');
+        $this->db->from('scores');
+        $this->db->join('participants', 'participants.id = scores.participant_id', 'left');
+        $this->db->join('rooms', 'rooms.id = scores.room_id', 'left');
+        $this->db->where('scores.question_id', $question_id);
+        $query = $this->db->get();
+        
+        return $query->result_array();
+    }
+
+    public function update_total_score($userId, $roomId, $score) {
+        $data = [
+            'participant_id' => $userId,
+            'room_id' => $roomId,
+            'score' => $score,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        // Use replace to update if exists or insert if not
+        $this->db->replace('participant_scores', $data);
+    }
+
+    public function get_total_score($userId, $roomId) {
+        $this->db->select('score');
+        $this->db->from('participant_scores');
+        $this->db->where('id', $userId);
+        $this->db->where('room_id', $roomId);
+        $query = $this->db->get();
+        $result = $query->row();
+        return $result ? $result->score : 0;
+    }
+
+    public function save_question_score($userId, $roomId, $questionId, $score) {
+        $data = [
+            'user_id' => $userId,
+            'room_id' => $roomId,
+            'question_id' => $questionId,
+            'score' => $score,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('participant_question_scores', $data);
+    }
+
+
     public function save_room($roomId, $pin) {
         // Insert room_id, PIN, and isValid into rooms table
         $data = array(
@@ -71,7 +185,18 @@ class quiz_model extends CI_Model {
         
         return $query->num_rows() > 0;
     }
+
     
+    public function getparticipantdata($name, $room_pin) {
+        $this->db->select('a.id');
+        $this->db->where('name', $name);
+        $this->db->where('room_pin', $room_pin);
+        $query = $this->db->get('participants as a');
+        
+        return $query->row_array();
+    }
+    
+
     public function process_join($name, $room_pin) {
         // Check if the name already exists for this room_pin
         $original_name = $name;
@@ -114,7 +239,6 @@ class quiz_model extends CI_Model {
         }
     }
     
-    
     public function invalidate_room($roomId) {
         $data = array('isValid' => 0);
         $this->db->where('room_id', $roomId);
@@ -146,6 +270,15 @@ class quiz_model extends CI_Model {
         $result = $query->row_array();
     
         return isset($result['isValid']) ? $result['isValid'] : null;
+    }
+
+    public function get_user_answers($roomId, $userId) {
+        $this->db->select('question_id, id');
+        $this->db->from('participant_answers'); // Replace with your actual table name
+        $this->db->where('room_id', $roomId);
+        $this->db->where('user_id', $userId);
+        $query = $this->db->get();
+        return $query->result();
     }
 
     // Fetch a players
@@ -209,5 +342,7 @@ class quiz_model extends CI_Model {
         
         return ''; // Return empty if no path found
     }
+
+
 }
 ?>

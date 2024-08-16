@@ -16,10 +16,6 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css')?>">
     <style>
-        body {
-            font-family: 'Press Start 2P', cursive;
-            background-color: #f8f9fa;
-        }
         .overlay {
             position: fixed;
             top: 0;
@@ -124,6 +120,9 @@
                 font-size: 0.9rem;
             }
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +180,8 @@
     </div>
 </div>
 
+<div id="scoreDisplay" style="display: none;"></div>
+
 <!-- Will display Waiting and Correct answer after all players have answered -->
 <div id="waitingMessage" class="text-center mt-3" hidden>Waiting for other players to answer...</div>
 <div id="correctAnswer" class="text-center mt-3" hidden>The correct answer is </div>
@@ -193,9 +194,10 @@
 <!-- WebSocket and AJAX Script -->
 <script>
     const socketUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:3000`;
-    const socket = new WebSocket(socketUrl);
-
+    let socket = null;
     let isSocketOpen = false;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5; // Adjust as needed
 
     function getRoomId() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -204,16 +206,34 @@
 
     let roomId = getRoomId();
 
-    socket.onopen = function() {
-        console.log('WebSocket connection established.');
-        isSocketOpen = true;
-    };
+    function connectWebSocket() {
+        socket = new WebSocket(socketUrl);
 
-    socket.onerror = function(error) {
-        console.error('WebSocket Error:', error);
-    };
+        socket.onopen = function() {
+            console.log('WebSocket connection established.');
+            isSocketOpen = true;
+            reconnectAttempts = 0; // Reset attempts on successful connection
+        };
+
+        socket.onclose = function() {
+            console.log('WebSocket connection closed.');
+            isSocketOpen = false;
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                setTimeout(connectWebSocket, 3000); // Attempt to reconnect after 3 seconds
+            } else {
+                console.error('Max reconnect attempts reached. Please refresh the page.');
+            }
+        };
+
+        socket.onerror = function(error) {
+            console.error('WebSocket Error:', error);
+        };
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
+    connectWebSocket();
+
     const overlay = document.getElementById('overlay');
     const countdownTimer = document.getElementById('countdown-timer');
     const questionTextElement = document.getElementById('question-text');
@@ -270,6 +290,32 @@
             console.error('AJAX error:', error);
         }
     }
+
+
+    function fetchScore() {
+    $.ajax({
+        url: '<?= site_url('main_controller/fetch_user_score') ?>',
+        type: 'POST',
+        data: {
+            room_id: roomId
+        },
+        success: function(response) {
+            const data = JSON.parse(response);
+            if (data.status === 'success') {
+                displayScore(data.score); // Ensure this function updates the UI
+            } else {
+                console.error('Error fetching score:', data.message);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', status, error);
+        }
+    });
+}
+
+
+
+    
 
     // Function to display a question
     function displayQuestion(question) {
@@ -368,7 +414,7 @@
             });
 
             if (response.status === 'success') {
-                console.log('Correct Answer:', response.data);
+                // console.log('Correct Answer:', response.data);
 
                 const correctAnswer = document.getElementById('correctAnswer');
                 if (correctAnswer) {
@@ -393,69 +439,124 @@
 
     function startCountdown(duration) {
         let timeLeft = duration;
+
+        // Retrieve the remaining time from localStorage if it exists
+        const storedTime = localStorage.getItem('countdownTime');
+        if (storedTime) {
+            timeLeft = parseInt(storedTime, 10);
+            localStorage.removeItem('countdownTime'); // Remove the stored time after use
+        }
+
         const countdownBar = document.querySelector('.countdown-bar');
-        
-        // Update the countdown bar width and display the remaining time
-        const countdownInterval = setInterval(() => {
-            // Calculate the percentage width for the countdown bar
+        const submitAnswerButton = document.getElementById('submit-answer'); // Ensure you have this element
+
+        // Function to update the countdown bar width and remaining time display
+        function updateCountdown() {
             const width = (timeLeft / duration) * 100 + '%';
             countdownBar.style.width = width;
+            // Optionally update a display element with timeLeft here
+        }
+
+        // Start the countdown
+        const countdownInterval = setInterval(() => {
+            updateCountdown();
+            
+            // Save the remaining time to localStorage
+            localStorage.setItem('countdownTime', timeLeft);
             
             // Decrease the time left
             timeLeft--;
             
             // If time is up
-            if (timeLeft < -1) {            
+            if (timeLeft < 0) {
                 clearInterval(countdownInterval);
                 submitAnswerButton.setAttribute('disabled', 'true');
                 showAnswer();
+                localStorage.removeItem('countdownTime'); // Clear the stored time
             }
         }, 1000);
+
+        // Initial update of the countdown bar
+        updateCountdown();
     }
 
     function showAnswer() {
-        const waitingMessage = document.getElementById('waitingMessage');
-        const correctAnswer = document.getElementById('correctAnswer');
-        const answerButtons = document.querySelectorAll('.btn.answer-btn');
+    const waitingMessage = document.getElementById('waitingMessage');
+    const correctAnswer = document.getElementById('correctAnswer');
+    const answerButtons = document.querySelectorAll('.btn.answer-btn');
+    const scoreDisplay = document.getElementById('scoreDisplay'); // Add this for score display
 
-        // Hide the waiting message and show the correct answer
-        waitingMessage.style.display = 'none';
-        correctAnswer.style.display = 'block';
-        correctAnswer.removeAttribute('hidden');
+    // Hide the waiting message and show the correct answer
+    waitingMessage.style.display = 'none';
+    correctAnswer.style.display = 'block';
+    correctAnswer.removeAttribute('hidden');
 
-        // Disable answer buttons
-        answerButtons.forEach(btn => {
-            btn.classList.add('disabled');
-            btn.disabled = true;
-        });
+    // Disable answer buttons
+    answerButtons.forEach(btn => {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+    });
 
-        // Move to the next question after a delay
-        setTimeout(() => {
-            // Hide the correct answer before moving to the next question
-            correctAnswer.style.display = 'none';
-            
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                displayQuestion(questions[currentQuestionIndex]);
+    // Move to the next question after a delay
+    setTimeout(() => {
+        // Hide the correct answer before moving to the next question
+        correctAnswer.style.display = 'none';
+        
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            displayQuestion(questions[currentQuestionIndex]);
+        } else {
+            // Handle the end of the quiz
+            Swal.fire({
+                title: "Good job!",
+                text: "The quiz is now done.",
+                icon: "success",
+                confirmButtonText: "Go to ranking"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show the scores
+                    fetchAndDisplayScores();
+                }
+            });
+        }
+    }, 3000); // Delay to show the correct answer before moving to the next question
+}
+    
+function fetchAndDisplayScores() {
+    $.ajax({
+        url: '<?= site_url('main_controller/fetch_user_score') ?>',
+        type: 'POST',
+        data: {
+            room_id: roomId
+        },
+        success: function(response) {
+            const data = JSON.parse(response);
+            if (data.status === 'success') {
+                // Display scores
+                displayScores(data.scores); // Ensure this function updates the UI
             } else {
-                // Handle the end of the quiz
-                // console.log('Quiz completed!');
-                Swal.fire({
-                    title: "Good job!",
-                    text: "The quiz is now done.",
-                    icon: "success",
-                    confirmButtonText: "Go to ranking"
-                }).then((result) => {
-                    /* Read more about isConfirmed */
-                    if (result.isConfirmed) {
-                        
-                    }
-                });
+                console.error('Error fetching scores:', data.message);
             }
-        }, 3000); // Delay to show the correct answer before moving to the next question
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', status, error);
+        }
+    });
+}
+
+    function displayScores(scores) {
+        const scoresContainer = document.getElementById('scoresContainer');
+        if (scoresContainer) {
+            scoresContainer.innerHTML = ''; // Clear any previous content
+            scores.forEach(score => {
+                const scoreElement = document.createElement('div');
+                scoreElement.textContent = `User ${score.user_id}: ${score.score}`;
+                scoresContainer.appendChild(scoreElement);
+            });
+            scoresContainer.style.display = 'block'; // Ensure the scores container is visible
+        }
     }
 
-    
     function loadImage(questId) {
         $.ajax({
             url: '<?= site_url('main_controller/get_image_path') ?>',
@@ -464,11 +565,13 @@
             data: { questId: questId },
             success: function(response) {
                 if (response.imagePath) {
-                    // Set the image source
+                    // Set the image source and show the image container
                     $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
+                    $('.image-container').removeClass('hidden');
                 } else {
-                    // Handle case where no image path is returned
-                    $('.image-container img').attr('src', ''); // Clear the image source
+                    // Clear the image source and hide the image container
+                    $('.image-container img').attr('src', '');
+                    $('.image-container').addClass('hidden');
                 }
             },
             error: function(xhr, status, error) {
@@ -478,32 +581,39 @@
     }
 
     function handleAnswerSelection(button, answerId, questionId) {
-        const answerButtons = document.querySelectorAll('.btn.answer-btn');
-        const waitingMessage = document.getElementById('waitingMessage');
+    const answerButtons = document.querySelectorAll('.btn.answer-btn');
+    const waitingMessage = document.getElementById('waitingMessage');
 
-        answerButtons.forEach(btn => {
-            btn.classList.add('disabled');
-            btn.disabled = true;
-            waitingMessage.removeAttribute('hidden');
-            waitingMessage.style.display = 'block';
-        });
+    answerButtons.forEach(btn => {
+        btn.classList.add('disabled');
+        btn.disabled = true;
+        waitingMessage.removeAttribute('hidden');
+        waitingMessage.style.display = 'block';
+    });
 
-        button.classList.remove('disabled');
-        button.classList.add('selected');
+    button.classList.remove('disabled');
+    button.classList.add('selected');
 
-        if (isSocketOpen) {
-            const data = {
-                type: 'answer_selected',
-                answerId: answerId,
-                questionId: questionId,
-                roomId: roomId
-            };
-            socket.send(JSON.stringify(data));
-            console.log('Selected answer data sent via WebSocket:', data);
-        } else {
-            console.error('Socket connection is not open.');
+    // Submit answer and calculate score
+    $.ajax({
+        url: '<?= site_url('main_controller/submit_answer') ?>',
+        type: 'POST',
+        data: {
+            room_id: roomId,
+            question_id: questionId,
+            answer_id: answerId
+        },
+        success: function(response) {
+            const data = JSON.parse(response);
+            if (data.status === 'success') {
+                // Display the score
+                displayScore(data.score);
+                // Proceed to the next question or end the quiz
+                // ...
+            }
         }
-    }
+    });
+}
 
     speakButton.addEventListener('click', () => {
         const questionText = questionTextElement.textContent;

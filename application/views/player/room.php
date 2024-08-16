@@ -83,11 +83,18 @@
     </div>
 
     <script type="text/javascript">
-        // Get the room pin and player name
-        const roomPin = document.getElementById('room-pin').value;
-        const playerName = "<?php echo $this->session->userdata('player_name'); ?>";
+    $(document).ready(function() {
+        // Retrieve roomPin and playerName from localStorage
+        const storedRoomPin = localStorage.getItem('roomPin');
+        const storedPlayerName = localStorage.getItem('playerName');
         
-        // Variable to store room_id
+        const roomPin = storedRoomPin || $('#room-pin').val();
+        const playerName = storedPlayerName || "<?php echo $this->session->userdata('player_name'); ?>";
+
+        // Store roomPin and playerName in localStorage
+        localStorage.setItem('roomPin', roomPin);
+        localStorage.setItem('playerName', playerName);
+        
         let roomId;
 
         // Function to fetch room ID from the server
@@ -95,18 +102,16 @@
             return $.ajax({
                 url: '<?= site_url('main_controller/fetch_room_id') ?>',
                 type: 'POST',
-                data: { roomPin: roomPin },
-                success: function(response) {
-                    if (response !== 'Room ID not found' && response !== 'No room pin provided') {
-                        roomId = response; // Store the room_id in the variable
-                        console.log('Room ID:', roomId); // Log the room ID for debugging
-                    } else {
-                        console.error(response); // Handle errors or missing room ID
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
+                data: { roomPin: roomPin }
+            }).done(function(response) {
+                if (response !== 'Room ID not found' && response !== 'No room id provided') {
+                    roomId = response; // Store the room_id in the variable
+                    console.log('Room ID:', roomId); // Log the room ID for debugging
+                } else {
+                    console.error(response); // Handle errors or missing room ID
                 }
+            }).fail(function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
             });
         }
 
@@ -121,7 +126,9 @@
         socket.onopen = function() {
             console.log('WebSocket connection established.');
             isSocketOpen = true;
-            fetchRoomId(roomPin); // Fetch room ID when WebSocket opens
+            fetchRoomId(roomPin).then(() => {
+                sendJoinRoomRequest(); // Send the join room request after fetching roomId
+            });
         };
 
         // Handle WebSocket message event
@@ -218,12 +225,14 @@
             }
         }
 
-    // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
-    setInterval(function() {
-        if (!isSocketOpen) {
-            console.error('WebSocket is not open. Polling might be needed.');
-        }
-    }, 500);
+        // Optional: Periodic polling if WebSocket is not open (for debugging or fallback)
+        setInterval(function() {
+            if (!isSocketOpen) {
+                console.error('WebSocket is not open. Polling might be needed.');
+            }
+        }, 500);
+    });
 </script>
+
 </body>
 </html>
