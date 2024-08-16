@@ -20,7 +20,7 @@ body {
     color: #000000;
 }
 .image-wrapper {
-    background-color: #e9e518; /* Lighter red background color */
+    background-color: #FED204; /* Lighter red background color */
     padding: 20px; /* Adds padding around the image */
     border-radius: 10px; /* Optional: adds rounded corners */
     display: inline-block; /* Ensure the background color wraps tightly around the image */
@@ -45,5 +45,6 @@ img{
 }
 #joinForm input{
     text-align: center;
+    background-color: #f2f0ec;
 }
 

@@ -70,8 +70,8 @@
                             <input type="text" id="question-1" name="questions[1][text]" class="form-control question" placeholder="Enter question" required>
                         </div>
                         <div class="mb-3">
-                            <label for="image-${quizIndex}" class="form-label">Upload Image</label>
-                            <input type="file" id="image-${quizIndex}" name="questions[${quizIndex}][image]" class="form-control" accept="image/*">
+                            <label for="image-1" class="form-label">Upload Image</label>
+                            <input type="file" id="image-1" name="questions[1][image]" class="form-control" accept="image/*">
                         </div>
                         <div class="mb-3">
                             <label for="time-1" class="form-label">Time (in seconds)</label>
@@ -201,6 +201,7 @@
             quizContainer.appendChild(newQuizSet);
         });
 
+        // this is for fill in blanks, its not
         document.getElementById('add-image-quiz').addEventListener('click', function() {
             quizIndex++;
             const quizContainer = document.getElementById('quiz-container');

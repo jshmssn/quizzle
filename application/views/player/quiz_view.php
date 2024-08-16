@@ -230,329 +230,328 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-    connectWebSocket();
+        connectWebSocket();
 
-    const overlay = document.getElementById('overlay');
-    const countdownTimer = document.getElementById('countdown-timer');
-    const questionTextElement = document.getElementById('question-text');
-    const answersElement = document.getElementById('answers');
-    const speakButton = document.getElementById('speak-button');
-    const questionNumberElement = document.getElementById('question-number');
-    const countdownBar = document.getElementById('countdown-bar');
-    const fillInTheBlankContainer = document.getElementById('fill-in-the-blank');
-    const answerInput = document.getElementById('answer-input');
-    const submitAnswerButton = document.getElementById('submit-answer');
+        const overlay = document.getElementById('overlay');
+        const countdownTimer = document.getElementById('countdown-timer');
+        const questionTextElement = document.getElementById('question-text');
+        const answersElement = document.getElementById('answers');
+        const speakButton = document.getElementById('speak-button');
+        const questionNumberElement = document.getElementById('question-number');
+        const countdownBar = document.getElementById('countdown-bar');
+        const fillInTheBlankContainer = document.getElementById('fill-in-the-blank');
+        const answerInput = document.getElementById('answer-input');
+        const submitAnswerButton = document.getElementById('submit-answer');
 
-    if (!roomId) {
-        console.error('Room id is required.');
-        return;
-    }
-
-    let countdown = 2;
-    const countdownInterval = setInterval(() => {
-        countdownTimer.textContent = countdown;
-        countdownTimer.style.opacity = 1;
-        countdown--;
-        if (countdown < 1) {
-            clearInterval(countdownInterval);
-            countdownTimer.style.opacity = 0;
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                fetchQuestions();
-            }, 1000);
-        }
-    }, 1000);
-
-    let questions = [];
-    let currentQuestionIndex = 0;
-
-    async function fetchQuestions() {
-        try {
-            const response = await $.ajax({
-                url: '<?= site_url('main_controller/fetch_questions')?>',
-                type: 'POST',
-                data: { room_id: roomId },
-                dataType: 'json'
-            });
-            if (response.status === 'success') {
-                questions = response.data;
-                if (questions.length > 0) {
-                    displayQuestion(questions[currentQuestionIndex]);
-                } else {
-                    console.error('No questions found.');
-                }
-            } else {
-                console.error('Error:', response.message);
-            }
-        } catch (error) {
-            console.error('AJAX error:', error);
-        }
-    }
-
-    // Function to display a question
-    function displayQuestion(question) {
-        if (!question) return;
-
-        // console.log('Question Data:', question); // Debugging line
-
-        // Display question text and number
-        questionTextElement.textContent = question.question_text || 'Loading question...';
-        questionNumberElement.textContent = `Question ${currentQuestionIndex + 1} out of ${questions.length}`;
-        
-        // Show image and fetch answers if necessary
-        loadImage(question.id);
-        fetchAnswers(question.id);
-        fetchCorrectAnswers(question.id);
-        startCountdown(question.time);
-
-        // Ensure submitAnswerButton is enabled for the new question
-        submitAnswerButton.removeAttribute('disabled');
-
-        // Handle display based on question type
-        if (question.isFill === '1') {
-            answersElement.style.display = 'none';
-            fillInTheBlankContainer.removeAttribute('hidden');
-            fillInTheBlankContainer.style.display = 'block'; // Ensure it is visible
-            submitAnswerButton.removeEventListener('click', handleFillInTheBlankAnswer); // Remove previous handlers if any
-            submitAnswerButton.addEventListener('click', () => handleFillInTheBlankAnswer(answerInput.value, question.id));
-        } else {
-            fillInTheBlankContainer.style.display = 'none'; // Hide fill-in-the-blank section
-            answersElement.style.display = 'flex';
-        }
-    }
-
-    function handleFillInTheBlankAnswer(answerText, questionId) {
-        const waitingMessage = document.getElementById('waitingMessage');
-        waitingMessage.removeAttribute('hidden');
-        waitingMessage.style.display = 'block';
-
-        if (isSocketOpen) {
-            const data = {
-                type: 'answer_selected',
-                answerText: answerText,
-                questionId: questionId,
-                roomId: roomId
-            };
-            socket.send(JSON.stringify(data));
-            console.log('Selected answer data sent via WebSocket:', data);
-        } else {
-            console.error('Socket connection is not open.');
+        if (!roomId) {
+            console.error('Room id is required.');
+            return;
         }
 
-        answerInput.value = '';
-        fillInTheBlankContainer.setAttribute('hidden', 'true');
-        waitingMessage.style.display = 'block';
-    }
-
-    async function fetchAnswers(questionId) {
-        try {
-            const response = await $.ajax({
-                url: '<?= site_url('main_controller/fetch_answers')?>',
-                type: 'POST',
-                data: { question_id: questionId },
-                dataType: 'json'
-            });
-            if (response.status === 'success') {
-                // console.log('Answers:', response.data);
-
-                answersElement.innerHTML = '';
-
-                response.data.forEach(answer => {
-                    const answerButton = document.createElement('button');
-                    answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
-                    answerButton.textContent = answer.answer_text;
-
-                    answerButton.addEventListener('click', function() {
-                        handleAnswerSelection(answerButton, answer.id, questionId);
-                    });
-
-                    answersElement.appendChild(answerButton);
-                });
-            } else {
-                console.error('Error:', response.message);
-            }
-        } catch (error) {
-            console.error('AJAX error:', error);
-        }
-    }
-
-    async function fetchCorrectAnswers(questionId) {
-        try {
-            const response = await $.ajax({
-                url: '<?= site_url('main_controller/fetch_correct_answers')?>',
-                type: 'POST',
-                data: { question_id: questionId },
-                dataType: 'json'
-            });
-
-            if (response.status === 'success') {
-                // console.log('Correct Answer:', response.data);
-
-                const correctAnswer = document.getElementById('correctAnswer');
-                if (correctAnswer) {
-                    correctAnswer.innerHTML = ''; // Clear any previous content
-                    
-                    response.data.forEach(answer => {
-                        const answerText = answer.answer_text; // Adjust this if your data structure is different
-                        console.log(answer.answer_text);
-                        correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
-                    });
-                } else {
-                    console.error('Element with id "correctAnswer" not found.');
-                }
-
-            } else {
-                console.error('Error:', response.message);
-            }
-        } catch (error) {
-            console.error('AJAX error:', error);
-        }
-    }
-
-    function startCountdown(duration) {
-        let timeLeft = duration;
-
-        // Retrieve the remaining time from localStorage if it exists
-        const storedTime = localStorage.getItem('countdownTime');
-        if (storedTime) {
-            timeLeft = parseInt(storedTime, 10);
-            localStorage.removeItem('countdownTime'); // Remove the stored time after use
-        }
-
-        const countdownBar = document.querySelector('.countdown-bar');
-        const submitAnswerButton = document.getElementById('submit-answer'); // Ensure you have this element
-
-        // Function to update the countdown bar width and remaining time display
-        function updateCountdown() {
-            const width = (timeLeft / duration) * 100 + '%';
-            countdownBar.style.width = width;
-            // Optionally update a display element with timeLeft here
-        }
-
-        // Start the countdown
+        let countdown = 2;
         const countdownInterval = setInterval(() => {
-            updateCountdown();
-            
-            // Save the remaining time to localStorage
-            localStorage.setItem('countdownTime', timeLeft);
-            
-            // Decrease the time left
-            timeLeft--;
-            
-            // If time is up
-            if (timeLeft < 0) {
+            countdownTimer.textContent = countdown;
+            countdownTimer.style.opacity = 1;
+            countdown--;
+            if (countdown < 1) {
                 clearInterval(countdownInterval);
-                submitAnswerButton.setAttribute('disabled', 'true');
-                showAnswer();
-                localStorage.removeItem('countdownTime'); // Clear the stored time
+                countdownTimer.style.opacity = 0;
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    fetchQuestions();
+                }, 1000);
             }
         }, 1000);
 
-        // Initial update of the countdown bar
-        updateCountdown();
-    }
+        let questions = [];
+        let currentQuestionIndex = 0;
 
-    function showAnswer() {
-        const waitingMessage = document.getElementById('waitingMessage');
-        const correctAnswer = document.getElementById('correctAnswer');
-        const answerButtons = document.querySelectorAll('.btn.answer-btn');
-
-        // Hide the waiting message and show the correct answer
-        waitingMessage.style.display = 'none';
-        correctAnswer.style.display = 'block';
-        correctAnswer.removeAttribute('hidden');
-
-        // Disable answer buttons
-        answerButtons.forEach(btn => {
-            btn.classList.add('disabled');
-            btn.disabled = true;
-        });
-
-        // Move to the next question after a delay
-        setTimeout(() => {
-            // Hide the correct answer before moving to the next question
-            correctAnswer.style.display = 'none';
-            
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                displayQuestion(questions[currentQuestionIndex]);
-            } else {
-                // Handle the end of the quiz
-                // console.log('Quiz completed!');
-                Swal.fire({
-                    title: "Good job!",
-                    text: "The quiz is now done.",
-                    icon: "success",
-                    confirmButtonText: "Go to ranking"
-                }).then((result) => {
-                    /* Read more about isConfirmed */
-                    if (result.isConfirmed) {
-                        
-                    }
+        async function fetchQuestions() {
+            try {
+                const response = await $.ajax({
+                    url: '<?= site_url('main_controller/fetch_questions')?>',
+                    type: 'POST',
+                    data: { room_id: roomId },
+                    dataType: 'json'
                 });
-            }
-        }, 3000); // Delay to show the correct answer before moving to the next question
-    }
-
-    
-    function loadImage(questId) {
-        $.ajax({
-            url: '<?= site_url('main_controller/get_image_path') ?>',
-            type: 'POST',
-            dataType: 'json',
-            data: { questId: questId },
-            success: function(response) {
-                if (response.imagePath) {
-                    // Set the image source and show the image container
-                    $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
-                    $('.image-container').removeClass('hidden');
+                if (response.status === 'success') {
+                    questions = response.data;
+                    if (questions.length > 0) {
+                        displayQuestion(questions[currentQuestionIndex]);
+                    } else {
+                        console.error('No questions found.');
+                    }
                 } else {
-                    // Clear the image source and hide the image container
-                    $('.image-container img').attr('src', '');
-                    $('.image-container').addClass('hidden');
+                    console.error('Error:', response.message);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', status, error);
+            } catch (error) {
+                console.error('AJAX error:', error);
             }
-        });
-    }
+        }
 
-    function handleAnswerSelection(button, answerId, questionId) {
-        const answerButtons = document.querySelectorAll('.btn.answer-btn');
-        const waitingMessage = document.getElementById('waitingMessage');
+        // Function to display a question
+        function displayQuestion(question) {
+            if (!question) return;
 
-        answerButtons.forEach(btn => {
-            btn.classList.add('disabled');
-            btn.disabled = true;
+            // console.log('Question Data:', question); // Debugging line
+
+            // Display question text and number
+            questionTextElement.textContent = question.question_text || 'Loading question...';
+            questionNumberElement.textContent = `Question ${currentQuestionIndex + 1} out of ${questions.length}`;
+            
+            // Show image and fetch answers if necessary
+            loadImage(question.id);
+            fetchAnswers(question.id);
+            fetchCorrectAnswers(question.id);
+            startCountdown(question.time);
+
+            // Ensure submitAnswerButton is enabled for the new question
+            submitAnswerButton.removeAttribute('disabled');
+
+            // Handle display based on question type
+            if (question.isFill === '1') {
+                answersElement.style.display = 'none';
+                fillInTheBlankContainer.removeAttribute('hidden');
+                fillInTheBlankContainer.style.display = 'block'; // Ensure it is visible
+                submitAnswerButton.removeEventListener('click', handleFillInTheBlankAnswer); // Remove previous handlers if any
+                submitAnswerButton.addEventListener('click', () => handleFillInTheBlankAnswer(answerInput.value, question.id));
+            } else {
+                fillInTheBlankContainer.style.display = 'none'; // Hide fill-in-the-blank section
+                answersElement.style.display = 'flex';
+            }
+        }
+
+        function handleFillInTheBlankAnswer(answerText, questionId) {
+            const waitingMessage = document.getElementById('waitingMessage');
             waitingMessage.removeAttribute('hidden');
             waitingMessage.style.display = 'block';
-        });
 
-        button.classList.remove('disabled');
-        button.classList.add('selected');
+            if (isSocketOpen) {
+                const data = {
+                    type: 'answer_selected',
+                    answerText: answerText,
+                    questionId: questionId,
+                    roomId: roomId
+                };
+                socket.send(JSON.stringify(data));
+                console.log('Selected answer data sent via WebSocket:', data);
+            } else {
+                console.error('Socket connection is not open.');
+            }
 
-        if (isSocketOpen) {
-            const data = {
-                type: 'answer_selected',
-                answerId: answerId,
-                questionId: questionId,
-                roomId: roomId
-            };
-            socket.send(JSON.stringify(data));
-            console.log('Selected answer data sent via WebSocket:', data);
-        } else {
-            console.error('Socket connection is not open.');
+            answerInput.value = '';
+            fillInTheBlankContainer.setAttribute('hidden', 'true');
+            waitingMessage.style.display = 'block';
         }
-    }
 
-    speakButton.addEventListener('click', () => {
-        const questionText = questionTextElement.textContent;
-        const speech = new SpeechSynthesisUtterance(questionText);
-        speechSynthesis.speak(speech);
+        async function fetchAnswers(questionId) {
+            try {
+                const response = await $.ajax({
+                    url: '<?= site_url('main_controller/fetch_answers')?>',
+                    type: 'POST',
+                    data: { question_id: questionId },
+                    dataType: 'json'
+                });
+                if (response.status === 'success') {
+                    // console.log('Answers:', response.data);
+
+                    answersElement.innerHTML = '';
+
+                    response.data.forEach(answer => {
+                        const answerButton = document.createElement('button');
+                        answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
+                        answerButton.textContent = answer.answer_text;
+
+                        answerButton.addEventListener('click', function() {
+                            handleAnswerSelection(answerButton, answer.id, questionId);
+                        });
+
+                        answersElement.appendChild(answerButton);
+                    });
+                } else {
+                    console.error('Error:', response.message);
+                }
+            } catch (error) {
+                console.error('AJAX error:', error);
+            }
+        }
+
+        async function fetchCorrectAnswers(questionId) {
+            try {
+                const response = await $.ajax({
+                    url: '<?= site_url('main_controller/fetch_correct_answers')?>',
+                    type: 'POST',
+                    data: { question_id: questionId },
+                    dataType: 'json'
+                });
+
+                if (response.status === 'success') {
+                    // console.log('Correct Answer:', response.data);
+
+                    const correctAnswer = document.getElementById('correctAnswer');
+                    if (correctAnswer) {
+                        correctAnswer.innerHTML = ''; // Clear any previous content
+                        
+                        response.data.forEach(answer => {
+                            const answerText = answer.answer_text; // Adjust this if your data structure is different
+                            console.log(answer.answer_text);
+                            correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
+                        });
+                    } else {
+                        console.error('Element with id "correctAnswer" not found.');
+                    }
+
+                } else {
+                    console.error('Error:', response.message);
+                }
+            } catch (error) {
+                console.error('AJAX error:', error);
+            }
+        }
+
+        function startCountdown(duration) {
+            let timeLeft = duration;
+
+            // Retrieve the remaining time from localStorage if it exists
+            const storedTime = localStorage.getItem('countdownTime');
+            if (storedTime) {
+                timeLeft = parseInt(storedTime, 10);
+                localStorage.removeItem('countdownTime'); // Remove the stored time after use
+            }
+
+            const countdownBar = document.querySelector('.countdown-bar');
+            const submitAnswerButton = document.getElementById('submit-answer'); // Ensure you have this element
+
+            // Function to update the countdown bar width and remaining time display
+            function updateCountdown() {
+                const width = (timeLeft / duration) * 100 + '%';
+                countdownBar.style.width = width;
+                // Optionally update a display element with timeLeft here
+            }
+
+            // Start the countdown
+            const countdownInterval = setInterval(() => {
+                updateCountdown();
+                
+                // Save the remaining time to localStorage
+                localStorage.setItem('countdownTime', timeLeft);
+                
+                // Decrease the time left
+                timeLeft--;
+                
+                // If time is up
+                if (timeLeft < 0) {
+                    clearInterval(countdownInterval);
+                    submitAnswerButton.setAttribute('disabled', 'true');
+                    showAnswer();
+                    localStorage.removeItem('countdownTime'); // Clear the stored time
+                }
+            }, 1000);
+
+            // Initial update of the countdown bar
+            updateCountdown();
+        }
+
+        function showAnswer() {
+            const waitingMessage = document.getElementById('waitingMessage');
+            const correctAnswer = document.getElementById('correctAnswer');
+            const answerButtons = document.querySelectorAll('.btn.answer-btn');
+
+            // Hide the waiting message and show the correct answer
+            waitingMessage.style.display = 'none';
+            correctAnswer.style.display = 'block';
+            correctAnswer.removeAttribute('hidden');
+
+            // Disable answer buttons
+            answerButtons.forEach(btn => {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            });
+
+            // Move to the next question after a delay
+            setTimeout(() => {
+                // Hide the correct answer before moving to the next question
+                correctAnswer.style.display = 'none';
+                
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
+                    displayQuestion(questions[currentQuestionIndex]);
+                } else {
+                    // Handle the end of the quiz
+                    // console.log('Quiz completed!');
+                    Swal.fire({
+                        title: "Good job!",
+                        text: "The quiz is now done.",
+                        icon: "success",
+                        confirmButtonText: "Go to ranking"
+                    }).then((result) => {
+                        /* Read more about isConfirmed */
+                        if (result.isConfirmed) {
+                            
+                        }
+                    });
+                }
+            }, 3000); // Delay to show the correct answer before moving to the next question
+        }
+
+        
+        function loadImage(questId) {
+            $.ajax({
+                url: '<?= site_url('main_controller/get_image_path') ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: { questId: questId },
+                success: function(response) {
+                    if (response.imagePath) {
+                        // Set the image source and show the image container
+                        $('.image-container img').attr('src', '<?= base_url() ?>' + response.imagePath);
+                        $('.image-container').removeClass('hidden');
+                    } else {
+                        // Clear the image source and hide the image container
+                        $('.image-container img').attr('src', '');
+                        $('.image-container').addClass('hidden');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error);
+                }
+            });
+        }
+
+        function handleAnswerSelection(button, answerId, questionId) {
+            const answerButtons = document.querySelectorAll('.btn.answer-btn');
+            const waitingMessage = document.getElementById('waitingMessage');
+
+            answerButtons.forEach(btn => {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+                waitingMessage.removeAttribute('hidden');
+                waitingMessage.style.display = 'block';
+            });
+
+            button.classList.remove('disabled');
+            button.classList.add('selected');
+
+            if (isSocketOpen) {
+                const data = {
+                    type: 'answer_selected',
+                    answerId: answerId,
+                    questionId: questionId,
+                    roomId: roomId
+                };
+                socket.send(JSON.stringify(data));
+                console.log('Selected answer data sent via WebSocket:', data);
+            } else {
+                console.error('Socket connection is not open.');
+            }
+        }
+
+        speakButton.addEventListener('click', () => {
+            const questionText = questionTextElement.textContent;
+            const speech = new SpeechSynthesisUtterance(questionText);
+            speechSynthesis.speak(speech);
+        });
     });
-});
-
 </script>
 </body>
 </html>

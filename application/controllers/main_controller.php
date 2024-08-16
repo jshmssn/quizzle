@@ -47,47 +47,25 @@ class main_controller extends CI_Controller {
                     return;
                 }
             }
-    
-            // Load the upload library
-            $this->load->library('upload');
-    
-            // Set upload configurations
-            $config['upload_path'] = $uploadPath;
-            $config['allowed_types'] = 'gif|jpg|png';
-            $config['max_size'] = 2048; // 2MB max size
-    
-            $this->upload->initialize($config);
-    
+         
             // Save the questions
             foreach ($questions as $index => $question) {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
-                $time = (int) $question['time']; // New line to get the time value
+                $time = (int) $question['time']; // Get the time value
     
-                $imagePath = '';
-                if (isset($_FILES['questions']['name'][$index]['image']) && $_FILES['questions']['name'][$index]['image'] != '') {
-                    // Debugging: print file info
-                    log_message('debug', print_r($_FILES, true));
-    
-                    $_FILES['file']['name'] = $_FILES['questions']['name'][$index]['image'];
-                    $_FILES['file']['type'] = $_FILES['questions']['type'][$index]['image'];
-                    $_FILES['file']['tmp_name'] = $_FILES['questions']['tmp_name'][$index]['image'];
-                    $_FILES['file']['error'] = $_FILES['questions']['error'][$index]['image'];
-                    $_FILES['file']['size'] = $_FILES['questions']['size'][$index]['image'];
-    
-                    if (!$this->upload->do_upload('file')) {
-                        $success = false;
-                        // Capture and log the error
-                        $error = $this->upload->display_errors();
-                        log_message('error', 'Upload error: ' . $error);
-                        $this->session->set_flashdata('status', 'error');
-                        $this->session->set_flashdata('msg', 'Image upload failed: ' . $error);
-                        redirect('room/host/' . $pin);
-                        return;
-                    }
-                    $uploadData = $this->upload->data();
-                    $imagePath = 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+                // Upload image and get the image path
+                $imagePath = $this->_upload_question_image($roomId, $index);
+                // echo '<pre>';
+                // echo $index;
+                // print_r($_FILES['questions']['name']['2']['image']);
+                // echo '</pre>';
+                // echo print_r($imagePath);
+                // exit;
+                if ($imagePath === false) {
+                    $success = false;
+                    break;
                 }
     
                 if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath)) {
@@ -119,7 +97,41 @@ class main_controller extends CI_Controller {
         }
     
         redirect('room/host/' . $pin);
-    }    
+    }
+
+    private function _upload_question_image($roomId, $index) {
+        $this->load->library('upload');
+    
+        // Set upload configurations
+        $config['upload_path'] = './assets/images/quiz/' . $roomId . '/';
+        $config['allowed_types'] = 'gif|jpg|png';
+        $config['max_size'] = 2048;
+    
+        $this->upload->initialize($config);
+    
+        if (isset($_FILES['questions']['name'][$index]['image']) && $_FILES['questions']['name'][$index]['image'] != '') {
+            $_FILES['file']['name'] = $_FILES['questions']['name'][$index]['image'];
+            $_FILES['file']['type'] = $_FILES['questions']['type'][$index]['image'];
+            $_FILES['file']['tmp_name'] = $_FILES['questions']['tmp_name'][$index]['image'];
+            $_FILES['file']['error'] = $_FILES['questions']['error'][$index]['image'];
+            $_FILES['file']['size'] = $_FILES['questions']['size'][$index]['image'];
+    
+            if (!$this->upload->do_upload('file')) {
+                // Capture and log the error
+                $error = $this->upload->display_errors();
+                log_message('error', 'Upload error: ' . $error);
+                $this->session->set_flashdata('status', 'error');
+                $this->session->set_flashdata('msg', 'Image upload failed: ' . $error);
+                redirect('quiz_creator');
+                return false;
+            }
+            
+            $uploadData = $this->upload->data();
+            return 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+        }
+    
+        return ''; // Return empty string if no image is uploaded
+    }
     
     public function hostgame() {
         $roomPin = $this->session->userdata('room_pin');
