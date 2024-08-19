@@ -351,6 +351,11 @@ class main_controller extends CI_Controller {
         }
     }    
     
+    public function start_game_host() {
+        $this->load->view('host/quiz_view_host');
+
+    }
+
     public function start_game() {
         // Load the view with data
         $this->load->view('player/quiz_view');
@@ -378,41 +383,6 @@ class main_controller extends CI_Controller {
             $this->session->set_flashdata('msg', 'Room PIN is not set.');
         }
     }
-    
-    public function start_game_host() {
-        // Get a random question
-        $question = $this->quiz_model->get_question();
-        $question_text = $question['question_text'];
-        $question_id = $question['id'];
-    
-        // Get answers for the question
-        $answers = $this->quiz_model->get_answers($question_id);
-    
-        // Get all players and their scores
-        $players = $this->quiz_model->get_players();
-    
-        // Find the correct answer
-        $correct_answer = null;
-        foreach ($answers as $answer) {
-            if ($answer['is_correct']) {
-                $correct_answer = $answer['answer_text'];
-                break;
-            }
-        }
-    
-        // Prepare data for the view
-        $data['question'] = $question_text;
-        $data['question_id'] = $question_id; // Include the question ID
-        $data['answers'] = array_map(function($answer) {
-            return $answer['answer_text'];
-        }, $answers);
-        $data['correct_answer'] = $correct_answer; // Include the correct answer in the data
-        $data['players'] = $players;
-    
-        // Load the view with data
-        $this->load->view('host/quiz_view_host', $data);
-    }
-    
 }
 
 ?>

@@ -114,12 +114,32 @@
         const socket = new WebSocket(socketUrl);
 
         let isSocketOpen = false;
+        let roomId;
 
+        // Function to fetch room ID from the server
+        function fetchRoomId(roomPin) {
+            return $.ajax({
+                url: '<?= site_url('main_controller/fetch_room_id') ?>',
+                type: 'POST',
+                data: { roomPin: roomPin }
+            }).done(function(response) {
+                if (response !== 'Room ID not found' && response !== 'No room id provided') {
+                    roomId = response; // Store the room_id in the variable
+                    console.log('Room ID:', roomId); // Log the room ID for debugging
+                } else {
+                    console.error(response); // Handle errors or missing room ID
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+            });
+        }
         // Handle WebSocket open event
         socket.onopen = function() {
             console.log('WebSocket connection established.');
             isSocketOpen = true;
-            sendJoinRoomRequest();
+            fetchRoomId(roomPin).then(() => {
+                sendJoinRoomRequest(); // Send the join room request after fetching roomId
+            });
         };
 
         // Handle WebSocket message event
@@ -187,7 +207,7 @@
         // Handle room status updates
         function handleRoomStatus(message) {
             if (message.hasStarted === 1 && message.isValid === 0) {
-                window.location.href = "<?php echo site_url('/start_game_host'); ?>";
+                window.location.href = `<?php echo site_url('/start_game_host'); ?>?roomId=${roomId}`;
             } else if (message.isValid === 0) {
                 console.warn("Room is not available. Redirecting...");
                 window.location.href = "<?php echo site_url('main_controller/index'); ?>";

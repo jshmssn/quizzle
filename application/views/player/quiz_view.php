@@ -441,8 +441,9 @@
                 updateCountdown();
                 
                 // Save the remaining time to localStorage
-                localStorage.setItem('countdownTime', timeLeft);
-                
+                // localStorage.setItem('countdownTime', timeLeft);
+                // localStorage.clear();
+
                 // Decrease the time left
                 timeLeft--;
                 
