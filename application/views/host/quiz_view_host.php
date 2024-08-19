@@ -71,7 +71,7 @@
             color: #fff;
         }
         .btn.disabled {
-            background-color: #6c757d;
+            background-color: #cc0000;
             color: #fff;
             pointer-events: none;
         }
@@ -123,6 +123,52 @@
         .hidden {
             display: none;
         }
+        .blue{
+            background-color: #28a745 !important;
+            opacity: 1 !important;
+            cursor: not-allowed;
+        }
+        .player-list {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .player-list .card-header {
+            background-color: #cc0000;
+            color: #fff;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .player-list .list-group-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .player-list .player-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .player-list .player-score {
+            font-size: 1.1rem;
+            color: #28a745;
+            font-weight: bold;
+        }
+        .player-list .list-group-item:last-child {
+            border-bottom: none;
+        }
+        .player-list .host-item {
+            background-color: #cc0000;
+            color: #fff;
+            border-radius: 8px;
+        }
+        @media (max-width: 768px) {
+            .player-list {
+                margin-bottom: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -132,30 +178,35 @@
     <div class="countdown-timer" id="countdown-timer"></div>
 </div>
 
-<div class="container mt-3">
-    <div class="row justify-content-between">
-        <div class="col-12">
-            <div class="question-number text-dark">Player 
-                <?= $this->session->userdata('player_name') ?>
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar Container -->
+        <div class="col-12 col-md-3">
+            <div class="player-list card">
+                <div class="card-header">
+                    <h5 class="card-title">Players</h5>
+                </div>
+                <ul class="list-group list-group-flush" id="player-list">
+                    <!-- Host item -->
+                    <li class="list-group-item host-item">
+                        <span class="player-name">Host: 
+                            <!-- <?= $this->session->userdata('player_name') ?> -->
+                            name <!-- Replace with PHP code to display host's name -->
+                        </span>
+                        <span class="player-score">N/A</span>
+                    </li>
+                    <!-- Player items will be dynamically inserted here -->
+                </ul>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="container mt-3">
-    <div class="row">
-        <div class="col-12">
+        <!-- Main Content Container -->
+        <div class="col-12 col-md-9">
             <div class="question-number">
                 <div class="countdown-bar" id="countdown-bar"></div>
                 <span id="question-number">Loading...</span>
             </div>
-        </div>
-    </div>
-</div>
-<div class="container mt-3">
-    <div class="row">
-        <div class="col-12 col-md-8">
-            <div class="card-body">
+            <div class="card-body mt-3">
                 <div class="question-container">
                     <h1 id="question-text" class="fit-text">Loading question...</h1>
                     <button id="speak-button" class="btn btn-link">
@@ -167,9 +218,7 @@
                 <!-- Image will be fetched from the database -->
                 <img src="" class="img-fluid" alt="Question Image" />
             </div>
-        </div>
-        <div class="col-12 col-md-4 mt-3">
-            <div id="answers">
+            <div id="answers" class="mt-3">
                 <!-- Answer buttons will be dynamically inserted here -->
             </div>
             <div id="fill-in-the-blank" hidden>
@@ -179,6 +228,45 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Example player data
+    const players = [
+        { name: "Player 1", score: 10 },
+        { name: "Player 2", score: 20 },
+        { name: "Player 3", score: 15 }
+    ];
+
+    function updatePlayerList(players) {
+        const playerList = document.getElementById("player-list");
+
+        // Clear existing player items except the host
+        while (playerList.children.length > 1) {
+            playerList.removeChild(playerList.lastChild);
+        }
+
+        players.forEach(player => {
+            const listItem = document.createElement("li");
+            listItem.className = "list-group-item";
+
+            const playerName = document.createElement("span");
+            playerName.className = "player-name";
+            playerName.textContent = player.name;
+
+            const playerScore = document.createElement("span");
+            playerScore.className = "player-score";
+            playerScore.textContent = player.score;
+
+            listItem.appendChild(playerName);
+            listItem.appendChild(playerScore);
+            playerList.appendChild(listItem);
+        });
+    }
+
+    // Call this function to update the player list
+    updatePlayerList(players);
+</script>
+
 
 <!-- Will display Waiting and Correct answer after all players have answered -->
 <div id="waitingMessage" class="text-center mt-3" hidden>Waiting for other players to answer...</div>
@@ -366,7 +454,14 @@
 
                     response.data.forEach(answer => {
                         const answerButton = document.createElement('button');
-                        answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
+                        console.log('Answer:', answer.answer_text, 'Correct:', answer.is_correct);
+                        
+                        if (answer.is_correct == 1) {
+                            answerButton.classList.add('btn', 'answer-btn', 'blue', 'btn-block', 'disabled');
+                        } else {
+                            answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block', 'disabled');
+                        }
+
                         answerButton.textContent = answer.answer_text;
 
                         answerButton.addEventListener('click', function() {
@@ -375,6 +470,7 @@
 
                         answersElement.appendChild(answerButton);
                     });
+
                 } else {
                     console.error('Error:', response.message);
                 }
@@ -418,7 +514,7 @@
 
         function startCountdown(duration) {
             let timeLeft = duration;
-
+            
             // Retrieve the remaining time from localStorage if it exists
             const storedTime = localStorage.getItem('countdownTime');
             if (storedTime) {
