@@ -47,47 +47,25 @@ class main_controller extends CI_Controller {
                     return;
                 }
             }
-    
-            // Load the upload library
-            $this->load->library('upload');
-    
-            // Set upload configurations
-            $config['upload_path'] = $uploadPath;
-            $config['allowed_types'] = 'gif|jpg|png';
-            $config['max_size'] = 2048; // 2MB max size
-    
-            $this->upload->initialize($config);
-    
+         
             // Save the questions
             foreach ($questions as $index => $question) {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
-                $time = (int) $question['time']; // New line to get the time value
+                $time = (int) $question['time']; // Get the time value
     
-                $imagePath = '';
-                if (isset($_FILES['questions']['name'][$index]['image']) && $_FILES['questions']['name'][$index]['image'] != '') {
-                    // Debugging: print file info
-                    log_message('debug', print_r($_FILES, true));
-    
-                    $_FILES['file']['name'] = $_FILES['questions']['name'][$index]['image'];
-                    $_FILES['file']['type'] = $_FILES['questions']['type'][$index]['image'];
-                    $_FILES['file']['tmp_name'] = $_FILES['questions']['tmp_name'][$index]['image'];
-                    $_FILES['file']['error'] = $_FILES['questions']['error'][$index]['image'];
-                    $_FILES['file']['size'] = $_FILES['questions']['size'][$index]['image'];
-    
-                    if (!$this->upload->do_upload('file')) {
-                        $success = false;
-                        // Capture and log the error
-                        $error = $this->upload->display_errors();
-                        log_message('error', 'Upload error: ' . $error);
-                        $this->session->set_flashdata('status', 'error');
-                        $this->session->set_flashdata('msg', 'Image upload failed: ' . $error);
-                        redirect('room/host/' . $pin);
-                        return;
-                    }
-                    $uploadData = $this->upload->data();
-                    $imagePath = 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+                // Upload image and get the image path
+                $imagePath = $this->_upload_question_image($roomId, $index);
+                // echo '<pre>';
+                // echo $index;
+                // print_r($_FILES['questions']['name']['2']['image']);
+                // echo '</pre>';
+                // echo print_r($imagePath);
+                // exit;
+                if ($imagePath === false) {
+                    $success = false;
+                    break;
                 }
     
                 if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath)) {
@@ -119,41 +97,118 @@ class main_controller extends CI_Controller {
         }
     
         redirect('room/host/' . $pin);
-    }    
+    }   
 
+    private function _upload_question_image($roomId, $index) {
+        $this->load->library('upload');
+    
+        // Set upload configurations
+        $config['upload_path'] = './assets/images/quiz/' . $roomId . '/';
+        $config['allowed_types'] = 'gif|jpg|png';
+        $config['max_size'] = 2048;
+    
+        $this->upload->initialize($config);
+    
+        if (isset($_FILES['questions']['name'][$index]['image']) && $_FILES['questions']['name'][$index]['image'] != '') {
+            $_FILES['file']['name'] = $_FILES['questions']['name'][$index]['image'];
+            $_FILES['file']['type'] = $_FILES['questions']['type'][$index]['image'];
+            $_FILES['file']['tmp_name'] = $_FILES['questions']['tmp_name'][$index]['image'];
+            $_FILES['file']['error'] = $_FILES['questions']['error'][$index]['image'];
+            $_FILES['file']['size'] = $_FILES['questions']['size'][$index]['image'];
+    
+            if (!$this->upload->do_upload('file')) {
+                // Capture and log the error
+                $error = $this->upload->display_errors();
+                log_message('error', 'Upload error: ' . $error);
+                $this->session->set_flashdata('status', 'error');
+                $this->session->set_flashdata('msg', 'Image upload failed: ' . $error);
+                redirect('quiz_creator');
+                return false;
+            }
+            
+            $uploadData = $this->upload->data();
+            return 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+        }
+    
+        return ''; // Return empty string if no image is uploaded
+    }
+    
     
     public function submit_answer() {
         $roomId = $this->input->post('room_id');
         $questionId = $this->input->post('question_id');
         $answerId = $this->input->post('answer_id');
-       
+        $responseTime = $this->input->post('response_time'); // Retrieve the time taken from the request
+    
         $player_name = $this->session->userdata('player_name');
         $room_pin = $this->session->userdata('room_pin');
-        
-       // Get participant data
+    
         $participantData = $this->quiz_model->getparticipantdata($player_name, $room_pin);
-
-        // Debug output to understand the structure of $participantData
-        echo '<pre>';
-        print_r($participantData);
-        echo '</pre>';
-
-        // Assuming getparticipantdata returns an associative array with 'id' as one of the keys
+    
         if (isset($participantData['id'])) {
             $participantId = $participantData['id'];
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Participant ID is missing.']);
             return;
         }
-
+    
+        // Save participant answer with time_taken
+        $this->quiz_model->save_participant_answer($participantId, $roomId, $questionId, $answerId, $responseTime);
+    
         // Calculate the score
-        $this->load->model('quiz_model');
         $score = $this->quiz_model->calculate_score($participantId, $roomId);
+    
         // Save the score
         $this->quiz_model->save_score($participantId, $roomId, $score);
-        
+    
         echo json_encode(['status' => 'success', 'score' => $score]);
     }
+
+        
+
+        /*
+        public function submit_answer() {
+            $roomId = $this->input->post('room_id');
+            $questionId = $this->input->post('question_id');
+            $answerId = $this->input->post('answer_id');
+            $responseTime = $this->input->post('response_time'); // This retrieves the posted response time
+            
+            $player_name = $this->session->userdata('player_name');
+            $room_pin = $this->session->userdata('room_pin');
+            
+            // Get participant data
+            $participantData = $this->quiz_model->getparticipantdata($player_name, $room_pin);
+            
+            if ($responseTime === null) {
+                echo json_encode(['status' => 'error', 'message' => 'Response time not received']);
+                return;
+            }
+            
+            if (isset($participantData['id'])) {
+                $participantId = $participantData['id'];
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Participant ID is missing.']);
+                return;
+            }
+            
+            // Check if the selected answer is correct
+            $isCorrect = $this->quiz_model->is_correct_answer($questionId, $answerId);
+            
+            // Calculate score based on response time and correctness
+            $score = $this->quiz_model->calculate_score($responseTime, $isCorrect);
+            
+            // Save participant's answer with response time
+            $this->quiz_model->save_participant_answer($participantId, $roomId, $questionId, $answerId, $responseTime, $isCorrect);
+            
+            // Save the score
+            $this->quiz_model->save_score($participantId, $roomId, $score);
+            
+            // Return response with status and score
+            echo json_encode(['status' => 'success', 'score' => $score, 'response' => $responseTime]);
+        }
+        
+    
+    */
     
     
     
@@ -405,14 +460,6 @@ class main_controller extends CI_Controller {
         } else {
             echo json_encode(['status' => 'error', 'message' => 'No questions found for this room']);
         }
-    }
-    public function fetch_scores() {
-        $this->load->model('quiz_model'); // Load your model
-        $question_id = $this->input->post('question_id');
-    
-        // Retrieve the scores from the database
-        $scores = $this->quiz_model->get_scores($question_id);
-        echo json_encode($scores);
     }
 
     public function fetch_user_score() {
