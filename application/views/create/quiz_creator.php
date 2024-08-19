@@ -222,6 +222,7 @@
                 <div class="mb-3">
                     <label for="image-${quizIndex}" class="form-label">Upload Image</label>
                     <input type="file" id="image-${quizIndex}" name="questions[${quizIndex}][image]" class="form-control" accept="image/*">
+                    <input type="text" hidden name="questions[${quizIndex}][fillable]" value="1">
                 </div>
                 <div class="mb-3">
                     <label for="fill-answer-${quizIndex}" class="form-label">Fill in the Blank Answer</label>

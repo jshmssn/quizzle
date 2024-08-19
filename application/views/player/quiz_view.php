@@ -174,7 +174,7 @@
             </div>
             <div id="fill-in-the-blank" hidden>
                 <input type="text" id="answer-input" class="form-control" placeholder="Type your answer here...">
-                <button id="submit-answer" class="btn btn-primary btn-block mt-2">Submit</button>
+                <button id="submit-answer" class="btn btn-light btn-block mt-2">Submit</button>
             </div>
         </div>
     </div>
@@ -447,7 +447,7 @@
                 timeLeft--;
                 
                 // If time is up
-                if (timeLeft < 0) {
+                if (timeLeft < -1) {
                     clearInterval(countdownInterval);
                     submitAnswerButton.setAttribute('disabled', 'true');
                     showAnswer();
@@ -486,17 +486,22 @@
                 } else {
                     // Handle the end of the quiz
                     // console.log('Quiz completed!');
-                    Swal.fire({
-                        title: "Good job!",
-                        text: "The quiz is now done.",
-                        icon: "success",
-                        confirmButtonText: "Go to ranking"
-                    }).then((result) => {
-                        /* Read more about isConfirmed */
-                        if (result.isConfirmed) {
+                    // Swal.fire({
+                    //     title: "Good job!",
+                    //     text: "The quiz is now done.",
+                    //     icon: "success",
+                    //     confirmButtonText: "Go to ranking"
+                    // }).then((result) => {
+                    //     /* Read more about isConfirmed */
+                    //     if (result.isConfirmed) {
                             
-                        }
-                    });
+                    //     }
+                    // });
+                    // Refresh the page when OK is clicked
+                    if (confirm('Click OK to debug again')) {
+                        location.reload();
+                    }
+                    
                 }
             }, 3000); // Delay to show the correct answer before moving to the next question
         }
@@ -556,8 +561,22 @@
         speakButton.addEventListener('click', () => {
             const questionText = questionTextElement.textContent;
             const speech = new SpeechSynthesisUtterance(questionText);
+
+            // Set additional properties for better mobile compatibility
+            speech.rate = 1; // Adjust the speech rate if needed
+            speech.pitch = 1; // Adjust the pitch if needed
+
+            // Ensure the synthesis stops any ongoing speech before starting
+            speechSynthesis.cancel();
+            
             speechSynthesis.speak(speech);
         });
+
+        // Check for Speech Synthesis support
+        if (!('speechSynthesis' in window)) {
+            alert('Your browser does not support speech synthesis.');
+        }
+
     });
 </script>
 </body>

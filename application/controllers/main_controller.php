@@ -53,22 +53,18 @@ class main_controller extends CI_Controller {
                 $questionText = $this->security->xss_clean($question['text']);
                 $answers = array_map([$this->security, 'xss_clean'], $question['answers']);
                 $correctAnswerIndex = (int) $question['correct'];
+                $isFill = $this->security->xss_clean($question['fillable']);
                 $time = (int) $question['time']; // Get the time value
     
                 // Upload image and get the image path
                 $imagePath = $this->_upload_question_image($roomId, $index);
-                // echo '<pre>';
-                // echo $index;
-                // print_r($_FILES['questions']['name']['2']['image']);
-                // echo '</pre>';
-                // echo print_r($imagePath);
-                // exit;
+                
                 if ($imagePath === false) {
                     $success = false;
                     break;
                 }
     
-                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath)) {
+                if (!$this->quiz_model->save_question($questionText, $answers, $correctAnswerIndex, $roomId, $time, $imagePath, $isFill)) {
                     $success = false;
                     break;
                 }
