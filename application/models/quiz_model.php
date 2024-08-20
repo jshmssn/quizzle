@@ -181,7 +181,7 @@ class quiz_model extends CI_Model {
 
     // Fetch answers for a given question
     public function get_answers_by_question($question_id) {
-        $this->db->select('id, answer_text');
+        $this->db->select('id, answer_text, is_correct');
         $this->db->where('question_id', $question_id);
         $this->db->order_by('RAND()');
         $query = $this->db->get('answers');

@@ -37,7 +37,7 @@ class main_controller extends CI_Controller {
             $pin = rand(10000, 99999); // Generate a 5-digit PIN
     
             // Create directory for images
-            $uploadPath = './assets/images/quiz/' . $roomId . '/';
+            $uploadPath = './assets/images/quiz/Room-' . $roomId . '/';
             if (!is_dir($uploadPath)) {
                 if (!mkdir($uploadPath, 0777, true)) {
                     // Directory creation failed
@@ -99,7 +99,7 @@ class main_controller extends CI_Controller {
         $this->load->library('upload');
     
         // Set upload configurations
-        $config['upload_path'] = './assets/images/quiz/' . $roomId . '/';
+        $config['upload_path'] = './assets/images/quiz/Room-' . $roomId . '/';
         $config['allowed_types'] = 'gif|jpg|png';
         $config['max_size'] = 2048;
     
@@ -123,7 +123,7 @@ class main_controller extends CI_Controller {
             }
             
             $uploadData = $this->upload->data();
-            return 'assets/images/quiz/' . $roomId . '/' . $uploadData['file_name'];
+            return 'assets/images/quiz/Room-' . $roomId . '/' . $uploadData['file_name'];
         }
     
         return ''; // Return empty string if no image is uploaded
@@ -203,21 +203,31 @@ class main_controller extends CI_Controller {
         // Get the room pin from session data
         $roomPin = $this->session->userdata('room_pin');
         $roomId = $this->session->userdata('roomId');
-    
+        
         // Check if the room pin exists in the session
         if ($roomPin && $roomId) {
             // Update the room's validity status
             $this->quiz_model->invalidate_room($roomId);
             $this->quiz_model->exit_all_participants($roomPin);
             $this->quiz_model->delete_room_questions($roomId);
+            
+            // Define the path to the directory
+            $dirPath = './assets/images/quiz/Room-' . $roomId;
     
+            // Attempt to delete the directory and its contents
+            if ($this->_delete_directory($dirPath)) {
+                // Set a flash message for success
+                $this->session->set_flashdata('status', 'success');
+                $this->session->set_flashdata('msg', 'You have left the room successfully and the room data has been deleted.');
+            } else {
+                // Set a flash message for partial success
+                $this->session->set_flashdata('status', 'warning');
+                $this->session->set_flashdata('msg', 'Room data has been deleted, but there was an issue removing the directory.');
+            }
+            
             // Unset the roomPin session data
             $items = array('player_name', 'room_pin');
             $this->session->unset_userdata($items);
-    
-            // Set a flash message for success
-            $this->session->set_flashdata('status', 'success');
-            $this->session->set_flashdata('msg', 'You have left the room successfully.');
         } else {
             // Set a flash message for error
             $this->session->set_flashdata('status', 'error');
@@ -226,6 +236,28 @@ class main_controller extends CI_Controller {
     
         // Redirect to the index page
         redirect(base_url());
+    }
+    
+    private function _delete_directory($dirPath) {
+        if (!file_exists($dirPath)) {
+            return false; // Directory does not exist
+        }
+    
+        // Get all files and directories inside the directory
+        $items = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dirPath, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+    
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                rmdir($item->getRealPath()); // Remove directory
+            } else {
+                unlink($item->getRealPath()); // Remove file
+            }
+        }
+    
+        return rmdir($dirPath); // Remove the main directory
     }
     
     public function leftroom() {

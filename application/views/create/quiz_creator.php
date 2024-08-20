@@ -249,12 +249,16 @@
             });
         });
 
-        window.addEventListener('click', function() {
-            $('#submit-button').on(function(e) {
-                e.preventDefault();
-                $('#submitModal').modal('show');
-            });
-        });
+        document.getElementById('submit-button').addEventListener('click', function(event) {
+    event.preventDefault(); // Prevent the form from submitting immediately
+    var submitModal = new bootstrap.Modal(document.getElementById('submitModal'));
+    submitModal.show();
+});
+
+document.getElementById('confirm-submit').addEventListener('click', function() {
+    document.getElementById('quiz-form').submit(); // Submit the form programmatically
+});
+
 
         window.addEventListener('scroll', function() {
             const scrollTopButton = document.getElementById('scroll-to-top');
