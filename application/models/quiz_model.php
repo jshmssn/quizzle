@@ -117,7 +117,6 @@ class quiz_model extends CI_Model {
         }
     }
     
-    
     public function invalidate_room($roomId) {
         $data = array('isValid' => 0);
         $this->db->where('room_id', $roomId);
