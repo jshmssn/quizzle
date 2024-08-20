@@ -123,14 +123,16 @@
         .hidden {
             display: none;
         }
+
+        
     </style>
 </head>
-<body>
 
 <div class="overlay" id="overlay">
     <div class="overlay-text">Starting in:</div>
     <div class="countdown-timer" id="countdown-timer"></div>
 </div>
+
 
 <div class="container mt-3">
     <div class="row justify-content-between">
@@ -180,7 +182,14 @@
     </div>
 </div>
 
-<div id="scoreDisplay" style="display: none;"></div>
+
+<!-- Score Overlay -->
+<div class="overlay hidden" id="score-overlay">
+    <div class="overlay-text">Your Score:</div>
+    <div id="score-text" class="countdown-timer">0</div>
+</div>
+
+
 
 <!-- Will display Waiting and Correct answer after all players have answered -->
 <div id="waitingMessage" class="text-center mt-3" hidden>Waiting for other players to answer...</div>
@@ -294,27 +303,7 @@
     }
 
 
-    function fetchScore() {
-    $.ajax({
-        url: '<?= site_url('main_controller/fetch_user_score') ?>',
-        type: 'POST',
-        data: {
-            room_id: roomId
-        },
-        success: function(response) {
-            const data = JSON.parse(response);
-            if (data.status === 'success') {
-                displayScores(data.score); // Ensure this function updates the UI
-            } else {
-                console.error('Error fetching score:', data.message);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX Error:', status, error);
-        }
-    });
-}
-
+   
 
     let questionStartTime = null; // Add this variable to track the question start time
 
@@ -495,9 +484,6 @@
 
         setTimeout(() => {
             correctAnswer.style.display = 'none';
-
-            fetchScore(); // Fetch and display the score here
-
             currentQuestionIndex++;
             if (currentQuestionIndex < questions.length) {
                 displayQuestion(questions[currentQuestionIndex]);
@@ -510,20 +496,22 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Show the scores
-                        displayScores();
+                      //  displayScores();
                     }
                 });
             }
         }, 3000);
     }
     
-   
+   /*
     function displayScores(score) {
         if (scoreDisplay) {
             scoreDisplay.innerHTML = `<h3>Your current score: ${score}</h3>`;
             scoreDisplay.style.display = 'block'; // Ensure the scores container is visible
         }
     }
+
+    */
 
     function loadImage(questId) {
         $.ajax({
@@ -579,7 +567,7 @@
             const data = JSON.parse(response);
             if (data.status === 'success') {
                 // Display the score
-                displayScores(data.score);
+               // displayScores(data.score);
                 // Proceed to the next question or end the quiz
                 // ...
             }

@@ -41,15 +41,94 @@ class quiz_model extends CI_Model {
  
     // SCORING
     public function save_score($participantId, $roomId, $score) {
+        $this->db->where('participant_id', $participantId);
+        $this->db->where('room_id', $roomId);
+        $query = $this->db->get('participant_scores');
+        
+        if ($query->num_rows() > 0) {
+            // Update existing score record
+            $this->db->where('participant_id', $participantId);
+            $this->db->where('room_id', $roomId);
+            $data = array(
+                'score' => $score,
+                'updated_at' => date('Y-m-d H:i:s')
+            );
+            $this->db->update('participant_scores', $data);
+        } else {
+            // Insert new score record
+            $data = array(
+                'participant_id' => $participantId,
+                'room_id' => $roomId,
+                'score' => $score,
+                'created_at' => date('Y-m-d H:i:s')
+            );
+            $this->db->insert('participant_scores', $data);
+        }
+    }
+        
+
+
+    public function save_question_score($participantId, $roomId, $questionId, $score) {
+        // Prepare the data
         $data = array(
             'participant_id' => $participantId,
             'room_id' => $roomId,
-            'score' => $score,
-            'created_at' => date('Y-m-d H:i:s')
+            'question_id' => $questionId,
+            'score' =>  $score,
         );
     
-        $this->db->Insert('participant_scores', $data);
+        // Check if a score for this question already exists
+        $this->db->where('participant_id', $participantId);
+        $this->db->where('room_id', $roomId);
+        $this->db->where('question_id', $questionId);
+        $query = $this->db->get('participant_question_scores');
+    
+        if ($query->num_rows() > 0) {
+            // Update the existing record
+            $this->db->where('participant_id', $participantId);
+            $this->db->where('room_id', $roomId);
+            $this->db->where('question_id', $questionId);
+            $this->db->update('participant_question_scores', $data);
+        } else {
+            // Insert a new record
+            $data['created_at'] = date('Y-m-d H:i:s'); // Set created_at timestamp
+            $this->db->insert('participant_question_scores', $data);
+        }
     }
+    
+
+    /*
+    public function save_question_score($participantId, $roomId, $questionId, $score) {
+    // Prepare data to insert or update
+    $data = array(
+        'participant_id' => $participantId,
+        'room_id'         => $roomId,
+        'question_id'     => $questionId,
+        'score'           => $score,
+        'created_at'      => date('Y-m-d H:i:s') // Add timestamps if needed
+    );
+
+    // Check if a record already exists for this participant, room, and question
+    $this->db->where('participant_id', $participantId);
+    $this->db->where('room_id', $roomId);
+    $this->db->where('question_id', $questionId);
+    $query = $this->db->get('participant_question_scores'); // Replace 'question_scores' with your table name
+
+    if ($query->num_rows() > 0) {
+        // Update the existing record
+        $this->db->where('participant_id', $participantId);
+        $this->db->where('room_id', $roomId);
+        $this->db->where('question_id', $questionId);
+        $this->db->update('participant_question_scores', $data);
+    } else {
+        // Insert a new record
+        $this->db->insert('participant_question_scores', $data);
+    }
+}
+
+
+*/
+
 
 
     public function save_participant_answer($userId, $roomId, $questionId, $answerId, $responseTime) {
@@ -86,71 +165,76 @@ class quiz_model extends CI_Model {
         // Return success response if needed
         echo json_encode(['status' => 'success', 'message' => 'Answer saved successfully']);
     }
-    
-    
-    
-    /*
-    public function calculate_score($participantId, $roomId) {
-        // Fetch all answers submitted by the participant for this room
-        $this->db->select('question_id, answer_id, is_correct');
-        $this->db->from('participant_answers'); 
-        $this->db->where('room_id', $roomId);
-        $this->db->where('user_id', $participantId);
-        $userAnswers = $this->db->get()->result();
-    
-        $score = 0;
-    
-        // Check each answer
-        foreach ($userAnswers as $answer) {
-            $this->db->select('id AS correct_answer_id');
-            $this->db->from('answers');
-            $this->db->where('question_id', $answer->question_id);
-            $this->db->where('is_correct', 1); 
-            $correctAnswer = $this->db->get()->row();
-    
-            if ($correctAnswer && $answer->answer_id == $correctAnswer->correct_answer_id) {
-                $score += 10; 
-            }
-        }
-    
-        return $score;
-    }
 
-    */
-    
     public function calculate_score($participantId, $roomId) {
         // Fetch all answers submitted by the participant for this room
-        $this->db->select('question_id, answer_id, response_time, is_correct');
-        $this->db->from('participant_answers');
-        $this->db->where('room_id', $roomId);
-        $this->db->where('user_id', $participantId);
+        $this->db->select('a.question_id, a.answer_id, a.response_time, a.is_correct, q.time');
+        $this->db->from('participant_answers a');
+        $this->db->join('questions q', 'a.question_id = q.id', 'left');
+        $this->db->where('a.room_id', $roomId);
+        $this->db->where('a.user_id', $participantId);
         $userAnswers = $this->db->get()->result();
-    
-        $score = 0;
         
-        // Calculate score based on is_correct and response_time
+        $totalScore = 0;
+        
+        // Calculate score for each question
         foreach ($userAnswers as $answer) {
             if ($answer->is_correct) {
+                $timeLimit = $answer->time;
+                $responseTime = $answer->response_time;
+                
+                // Calculate percentage based on the response time and time limit
+                $percentage = 0;
+    
+                if ($responseTime <= 0.25 * $timeLimit) { // 25% of the time limit or less
+                    $percentage = 1; // 100% of the base points
+                } elseif ($responseTime <= 0.50 * $timeLimit) { // 50% of the time limit or less
+                    $percentage = 0.75; // 75% of the base points
+                } elseif ($responseTime <= 0.75 * $timeLimit) { // 75% of the time limit or less
+                    $percentage = 0.50; // 50% of the base points
+                } else {
+                    $percentage = 0.25; // 25% of the base points
+                }
+                
                 // Base points for a correct answer
                 $basePoints = 100;
-                
-                // Time-based scoring
-                if ($answer->response_time <= 5) {
-                    $score += $basePoints; // 100 points for 5 seconds or less
-                } elseif ($answer->response_time <= 10) {
-                    $score += 75; // 75 points for 6-10 seconds
-                } elseif ($answer->response_time <= 15) {
-                    $score += 50; // 50 points for 11-15 seconds
+                $scoreAdded = $basePoints * $percentage;
+    
+                // Insert or update score in participant_question_scores table
+                $this->db->where('participant_id', $participantId);
+                $this->db->where('room_id', $roomId);
+                $this->db->where('question_id', $answer->question_id);
+                $query = $this->db->get('participant_question_scores');
+    
+                if ($query->num_rows() > 0) {
+                    // Update existing record
+                    $this->db->where('participant_id', $participantId);
+                    $this->db->where('room_id', $roomId);
+                    $this->db->where('question_id', $answer->question_id);
+                    $this->db->update('participant_question_scores', array(
+                        'score_added' => $scoreAdded,
+                    ));
                 } else {
-                    $score += 25; // 25 points for 16 seconds or more
+                    // Insert new record
+                    $this->db->insert('participant_question_scores', array(
+                        'participant_id' => $participantId,
+                        'room_id' => $roomId,
+                        'question_id' => $answer->question_id,
+                        'score_added' => $scoreAdded,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ));
                 }
+    
+                // Add to total score
+                $totalScore += $scoreAdded;
             }
         }
         
-        return $score;
+        return $totalScore;
     }
     
-
+    
+    
 
     public function get_question_score($userId, $roomId, $questionId) {
         $this->db->select('score');
@@ -163,31 +247,31 @@ class quiz_model extends CI_Model {
         return $result ? $result->score : 0;
     }
 
+
+    /*
     public function get_user_score($participantId, $roomId) {
+        // Log the parameters for debugging
+        log_message('info', "Fetching score for participant: $participantId in room: $roomId");
         $this->db->select('score');
         $this->db->from('participant_scores');
         $this->db->where('participant_id', $participantId);
         $this->db->where('room_id', $roomId);
         $query = $this->db->get();
     
-        if ($query->num_rows() > 0) {
-            return $query->row()->score;
-        } else {
-            return 0;
-        }
-    }
+        // Log the number of rows found
+        log_message('info', "Number of rows returned: " . $query->num_rows());
     
-
-    public function save_question_score($userId, $roomId, $questionId, $score) {
-        $data = [
-            'user_id' => $userId,
-            'room_id' => $roomId,
-            'question_id' => $questionId,
-            'score' => $score,
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-        $this->db->insert('participant_question_scores', $data);
-    }
+        if ($query->num_rows() > 0) {
+            $score = $query->row()->score;
+            // Log the score retrieved
+            log_message('info', "Score found: $score");
+            return $score;
+        } else {
+            log_message('info', "No score found for participant: $participantId in room: $roomId");
+            return 0; // Return 0 if no score is found
+        }
+    }  
+*/
 
 
     public function save_room($roomId, $pin) {
@@ -359,18 +443,6 @@ class quiz_model extends CI_Model {
         return $query->result_array();
     }    
 
-
-    /*
-    // Fetch correct answer for a given question
-    public function get_correct_answers($question_id) {
-        $this->db->select('answer_text');
-        $this->db->where('question_id', $question_id);
-        $this->db->where('is_correct', 1);
-        $query = $this->db->get('answers');
-        return $query->result_array();
-    }   
-
-    */
     public function is_correct_answer($questionId, $answerId) {
         $this->db->where('question_id', $questionId);
         $this->db->where('id', $answerId);
