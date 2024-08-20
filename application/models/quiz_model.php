@@ -43,7 +43,9 @@ class quiz_model extends CI_Model {
         $data = array(
             'room_id' => $roomId,
             'pin' => $pin,
-            'isValid' => 1
+            'isValid' => 1,
+            'created_at' => NOW(),
+            'updated_at' => NOW()
         );
     
         $this->db->insert('rooms', $data);

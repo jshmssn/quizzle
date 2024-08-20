@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multiple Choice</title>
     <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
@@ -59,12 +59,12 @@
         }
         #answers {
             display: flex;
-            flex-direction: column;
             gap: 10px;
         }
         .btn.answer-btn {
             font-size: 1.1rem;
-            padding: 15px;
+            width: 40%;
+            padding: 16px;
         }
         .btn.selected {
             background-color: #28a745;
@@ -105,19 +105,28 @@
             transition: width 1s linear;
         }
         @media (max-width: 768px) {
+            .player-list {
+                margin-bottom: 20px;
+            }
             #question-text {
                 font-size: 1.25rem;
             }
+            #answers {
+                flex-direction: column; /* Stack answers vertically on mobile devices */
+            }
             .btn.answer-btn {
                 font-size: 1rem;
+                width: 100%; /* Make buttons full width on mobile devices */
             }
         }
+
         @media (max-width: 576px) {
             #question-text {
                 font-size: 1rem;
             }
             .btn.answer-btn {
                 font-size: 0.9rem;
+                flex-direction: column;
             }
         }
         .hidden {
@@ -164,10 +173,9 @@
             color: #fff;
             border-radius: 8px;
         }
-        @media (max-width: 768px) {
-            .player-list {
-                margin-bottom: 20px;
-            }
+        #skip-button{
+            position: absolute;
+            right: 0;
         }
     </style>
 </head>
@@ -209,9 +217,12 @@
             <div class="card-body mt-3">
                 <div class="question-container">
                     <h1 id="question-text" class="fit-text">Loading question...</h1>
-                    <button id="speak-button" class="btn btn-link">
-                        <i class="fas fa-volume-up"></i>
-                    </button>
+                    <a id="speak-button" class="btn">
+                        <i class="fa fa-volume-up"></i>
+                    </a>
+                    <a id="skip-button" class="btn">
+                        <i class="fas fa-forward"></i>
+                    </a>
                 </div>
             </div>
             <div class="image-container">
@@ -266,11 +277,6 @@
     // Call this function to update the player list
     updatePlayerList(players);
 </script>
-
-
-<!-- Will display Waiting and Correct answer after all players have answered -->
-<div id="waitingMessage" class="text-center mt-3" hidden>Waiting for other players to answer...</div>
-<div id="correctAnswer" class="text-center mt-3" hidden>The correct answer is </div>
 
 <!-- Bootstrap JS and dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -454,14 +460,7 @@
 
                     response.data.forEach(answer => {
                         const answerButton = document.createElement('button');
-                        console.log('Answer:', answer.answer_text, 'Correct:', answer.is_correct);
-                        
-                        if (answer.is_correct == 1) {
-                            answerButton.classList.add('btn', 'answer-btn', 'blue', 'btn-block', 'disabled');
-                        } else {
-                            answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block', 'disabled');
-                        }
-
+                        answerButton.classList.add('btn', 'answer-btn', 'red', 'btn-block');
                         answerButton.textContent = answer.answer_text;
 
                         answerButton.addEventListener('click', function() {
@@ -470,7 +469,6 @@
 
                         answersElement.appendChild(answerButton);
                     });
-
                 } else {
                     console.error('Error:', response.message);
                 }
@@ -489,20 +487,7 @@
                 });
 
                 if (response.status === 'success') {
-                    // console.log('Correct Answer:', response.data);
-
-                    const correctAnswer = document.getElementById('correctAnswer');
-                    if (correctAnswer) {
-                        correctAnswer.innerHTML = ''; // Clear any previous content
-                        
-                        response.data.forEach(answer => {
-                            const answerText = answer.answer_text; // Adjust this if your data structure is different
-                            // console.log(answer.answer_text);
-                            correctAnswer.innerHTML += `<h3>The correct answer is <span style="color: #cc0000;">${answerText}</span></h3>`;
-                        });
-                    } else {
-                        console.error('Element with id "correctAnswer" not found.');
-                    }
+                    // console.log('Correct Answer:', response.data);                    
 
                 } else {
                     console.error('Error:', response.message);
@@ -514,7 +499,7 @@
 
         function startCountdown(duration) {
             let timeLeft = duration;
-            
+
             // Retrieve the remaining time from localStorage if it exists
             const storedTime = localStorage.getItem('countdownTime');
             if (storedTime) {
@@ -548,6 +533,16 @@
                     clearInterval(countdownInterval);
                     submitAnswerButton.setAttribute('disabled', 'true');
                     showAnswer();
+                    Swal.fire({
+                        title: "Ranking",
+                        text: "Test",
+                        icon: "success",
+                        showConfirmButton: false, // Disable the confirm button
+                        timer: 15000, // The alert will close automatically after 5 seconds (5000 ms)
+                        timerProgressBar: true, // Display a progress bar showing the countdown
+                        allowOutsideClick: false, // Disable closing the alert by clicking outside
+                        allowEscapeKey: false //Disable escape key
+                    })
                     localStorage.removeItem('countdownTime'); // Clear the stored time
                 }
             }, 1000);
@@ -557,14 +552,7 @@
         }
 
         function showAnswer() {
-            const waitingMessage = document.getElementById('waitingMessage');
-            const correctAnswer = document.getElementById('correctAnswer');
             const answerButtons = document.querySelectorAll('.btn.answer-btn');
-
-            // Hide the waiting message and show the correct answer
-            waitingMessage.style.display = 'none';
-            correctAnswer.style.display = 'block';
-            correctAnswer.removeAttribute('hidden');
 
             // Disable answer buttons
             answerButtons.forEach(btn => {
@@ -573,34 +561,30 @@
             });
 
             // Move to the next question after a delay
-            setTimeout(() => {
-                // Hide the correct answer before moving to the next question
-                correctAnswer.style.display = 'none';
-                
+            setTimeout(() => {                
                 currentQuestionIndex++;
                 if (currentQuestionIndex < questions.length) {
                     displayQuestion(questions[currentQuestionIndex]);
                 } else {
                     // Handle the end of the quiz
                     // console.log('Quiz completed!');
-                    // Swal.fire({
-                    //     title: "Good job!",
-                    //     text: "The quiz is now done.",
-                    //     icon: "success",
-                    //     confirmButtonText: "Go to ranking"
-                    // }).then((result) => {
-                    //     /* Read more about isConfirmed */
-                    //     if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Good job!",
+                        text: "The quiz is now done.",
+                        icon: "success",
+                        confirmButtonText: "See overall ranking"
+                    }).then((result) => {
+                        /* Read more about isConfirmed */
+                        if (result.isConfirmed) {
                             
-                    //     }
-                    // });
+                        }
+                    });
                     // Refresh the page when OK is clicked
-                    if (confirm('Click OK to debug again')) {
-                        location.reload();
-                    }
-                    
+                    // if (confirm('Click OK to debug again')) {
+                    //     location.reload();
+                    // }
                 }
-            }, 3000); // Delay to show the correct answer before moving to the next question
+            }, 14000); // Delay to show the correct answer before moving to the next question
         }
 
         

@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ranking Page</title>
+    <title>Ranking Animation with AJAX</title>
     <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" integrity="sha384-rOA1PnstxnOBLzCLMcre8ybwbTmemjzdNlILg8O7z1lUkLXozs4DHonlDtnE7fpc" crossorigin="anonymous"></script>
-
     <style>
         html, body {
             height: 100%; 
@@ -29,7 +31,7 @@
 
         /* Apply the custom font */
         body, .card-title, .ranking-btn {
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P';
         }
 
         .card-body {
@@ -97,66 +99,116 @@
 </head>
 <body class="background-col">
 
-    <div class="align-items-center">
-        <div class="card-body">
-            <h1 class="text-center">Ranking</h1>
-        </div>
-        <div class="ranking-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Name</th>
-                        <th>Score</th>
-                    </tr>
-                </thead>
-                <tbody id="ranking-body">
-                    <tr id="rank-1">
-                        <td>2</td>
-                        <td>Player One</td>
-                        <td>1000</td>
-                    </tr>
-                    <tr id="rank-2">
-                        <td>1</td>
-                        <td>You</td>
-                        <td>1100</td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Player Three</td>
-                        <td>850</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="col-md-4 mt-4">
-        </div>
+<div class="align-items-center">
+    <div class="card-body">
+        <h1 class="text-center">Ranking</h1>
+    </div>
+    <div class="ranking-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-body">
+                <!-- Rows will be inserted dynamically -->
+            </tbody>
+        </table>
     </div>
 
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-        window.onload = () => {
-            // Get the rows for Player One and Player Two
-            const playerOneRow = document.getElementById('rank-1');
-            const playerTwoRow = document.getElementById('rank-2');
+    <div class="col-md-4 mt-4">
+    </div>
+</div>
 
-            // Add animation classes to switch places
-            playerOneRow.classList.add('animate-down');
-            playerTwoRow.classList.add('animate-up');
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    window.onload = () => {
+        // Example player data
+        const initialPlayers = [
+            { name: "Player 1", score: 10 },
+            { name: "Player 2", score: 20 },
+            { name: "Player 3", score: 15 }
+        ];
 
-            // Remove the animation classes after the animation completes
-            setTimeout(() => {
-                playerOneRow.classList.remove('animate-down');
-                playerTwoRow.classList.remove('animate-up');
-                // Swap the rows
-                const parent = playerOneRow.parentNode;
-                parent.insertBefore(playerTwoRow, playerOneRow);
-            }, 2000); // Match the duration of the animation
-        };
-    </script>
+        // Function to generate the table rows based on player data
+        function generateRankingRows(players) {
+            const rankingBody = $('#ranking-body');
+            rankingBody.empty();
+
+            players.forEach((player, index) => {
+                rankingBody.append(`
+                    <tr id="rank-${index + 1}">
+                        <td>${index + 1}</td>
+                        <td>${player.name}</td>
+                        <td>${player.score}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        // Function to animate ranking changes
+        function animateRankings(players) {
+            const rows = $('#ranking-body tr').get();
+
+            // Sort the rows based on the new player data
+            rows.sort((a, b) => {
+                const scoreA = parseInt($(a).find('td:nth-child(3)').text());
+                const scoreB = parseInt($(b).find('td:nth-child(3)').text());
+                return scoreB - scoreA; // Sort by score descending
+            });
+
+            rows.forEach((row, index) => {
+                const $row = $(row);
+                const currentRank = parseInt($row.find('td:nth-child(1)').text());
+                const newRank = index + 1;
+
+                if (newRank < currentRank) {
+                    $row.addClass('animate-up');
+                } else if (newRank > currentRank) {
+                    $row.addClass('animate-down');
+                }
+
+                setTimeout(() => {
+                    $row.removeClass('animate-up animate-down');
+                    $row.find('td:nth-child(1)').text(newRank); // Update rank
+                }, 2000);
+            });
+
+            // Append rows in correct order
+            rows.forEach(row => $('#ranking-body').append(row));
+        }
+
+        // Function to fetch player data and update the rankings
+        function fetchAndAnimateRankings() {
+            // Example: Simulating an AJAX call to fetch updated player data
+            $.ajax({
+                url: '/get-updated-player-data', // Replace with your actual data URL
+                method: 'GET',
+                success: function(data) {
+                    const players = data; // Assuming 'data' is the array of players
+
+                    // Generate initial rows if not already present
+                    if ($('#ranking-body').children().length === 0) {
+                        generateRankingRows(players);
+                    } else {
+                        animateRankings(players);
+                    }
+                },
+                error: function(error) {
+                    console.error('Error fetching player data:', error);
+                }
+            });
+        }
+
+        // Initial population of the ranking table with example player data
+        generateRankingRows(initialPlayers);
+
+        // Set up a timer to refresh and animate rankings every 5 seconds
+        setInterval(fetchAndAnimateRankings, 5000);
+    };
+</script>
+
 </body>
 </html>
